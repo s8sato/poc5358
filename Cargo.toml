@@ -1,0 +1,14 @@
+[workspace.package]
+name = "poc5358"
+version = "0.1.0"
+edition = "2024"
+
+[workspace]
+members = [
+    "host",
+    "wasm_instruction",
+    "authorizer"
+, "common"]
+
+[workspace.dependencies]
+wasmtime = "33.0"
