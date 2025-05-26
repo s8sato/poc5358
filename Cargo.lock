@@ -15,5 +15,5 @@ name = "host"
 version = "0.1.0"
 
 [[package]]
-name = "wasm_instruction"
+name = "wasm_command"
 version = "0.1.0"

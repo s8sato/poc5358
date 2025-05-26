@@ -1,5 +1,5 @@
 [package]
-name = "wasm_instruction"
+name = "wasm_command"
 version.workspace = true
 edition.workspace = true
 

@@ -6,9 +6,10 @@ edition = "2024"
 [workspace]
 members = [
     "host",
-    "wasm_instruction",
-    "authorizer"
-, "common"]
+    "wasm_command",
+    "authorizer",
+    "common",
+]
 
 [workspace.dependencies]
 wasmtime = "33.0"
