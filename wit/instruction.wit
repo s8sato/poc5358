@@ -1,0 +1,6 @@
+world instruction {
+    use types.{read-set, view-set, write-set};
+
+    export read-request: func(args: string) -> read-set;
+    export write-request: func(view: view-set, args: string) -> write-set;
+}

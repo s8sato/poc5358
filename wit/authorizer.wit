@@ -1,0 +1,4 @@
+world authorizer {
+    export read-approval: func() -> bool;
+    export write-approval: func() -> bool;
+}

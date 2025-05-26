@@ -1,10 +1,12 @@
 [package]
-name = "host"
+name = "instruction"
 version.workspace = true
 edition.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
 
 [dependencies]
 serde = { workspace = true }
 serde_json = { workspace = true }
-wasmtime = { workspace = true }
-wasmtime-wasi = { workspace = true }
+wit-bindgen = { workspace = true}

@@ -1,0 +1,96 @@
+interface types {
+// interface general {
+    record context {
+        height: u64,
+        timestamp: u64,
+    }
+
+    // type hash = list<u8>;
+    // type key-elem = hash;
+    type key-elem = string;
+
+    record single-key {
+        e0: key-elem,
+    }
+    record composite-key {
+        e0: key-elem,
+        e1: key-elem,
+    }
+    type account-asset-k = composite-key;
+
+    record fuzzy-single-key {
+        e0: option<key-elem>,
+    }
+    record fuzzy-composite-key {
+        e0: option<key-elem>,
+        e1: option<key-elem>,
+    }
+    type fuzzy-account-asset-k = fuzzy-composite-key;
+
+    variant node-key {
+        account-asset(account-asset-k),
+    }
+    variant fuzzy-node-key {
+        account-asset(fuzzy-account-asset-k),
+    }
+// }
+
+// interface read {
+    // use general.{fuzzy-node-key};
+
+    record read-set {
+        inner: list<read-entry>,
+    }
+
+    record read-entry {
+        key: fuzzy-node-key,
+        value: node-value-read,
+    }
+
+    variant node-value-read {
+        account-asset,
+    }
+// }
+
+// interface view {
+    // use general.{node-key};
+
+    record view-set {
+        inner: list<view-entry>,
+    }
+
+    record view-entry {
+        key: node-key,
+        value: node-value-view,
+    }
+
+    variant node-value-view {
+        account-asset(account-asset-v),
+    }
+
+    record account-asset-v {
+        balance: u32,
+    }
+// }
+
+// interface write {
+    // use general.{node-key};
+
+    record write-set {
+        inner: list<write-entry>,
+    }
+
+    record write-entry {
+        key: node-key,
+        value: node-value-write,
+    }
+
+    variant node-value-write {
+        account-asset(account-asset-w),
+    }
+
+    variant account-asset-w {
+        send(u32),
+        receive(u32),
+    }
+}
