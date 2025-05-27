@@ -6,26 +6,26 @@ pub trait Ffi: Sized {
     type FfiType: From<Self> + Into<Self>;
 }
 
-struct Tree<T: Mode>(PhantomData<T>);
+pub struct Tree<T: Mode>(PhantomData<T>);
 
-trait Mode {}
+pub trait Mode {}
 
-struct Read;
-struct View;
-struct Write;
+pub struct Read;
+pub struct View;
+pub struct Write;
 
 impl Mode for Read {}
 impl Mode for View {}
 impl Mode for Write {}
 
-type ReadSet = Tree<Read>;
-type StateView = Tree<View>;
-type WriteSet = Tree<Write>;
+pub struct Context;
+pub type ReadSet = Tree<Read>;
+pub type StateView = Tree<View>;
+pub type WriteSet = Tree<Write>;
 
-struct FfiTreeRead;
-
-struct FfiTreeView;
-struct FfiTreeWrite;
+pub struct FfiTreeRead;
+pub struct FfiTreeView;
+pub struct FfiTreeWrite;
 
 impl Ffi for Tree<Read> {
     type FfiType = FfiTreeRead;
