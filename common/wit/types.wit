@@ -1,0 +1,86 @@
+package wit:types;
+
+interface general {
+    record context {
+        height: u64,
+        timestamp: u64,
+    }
+
+    type json = string;
+
+    // type hash = list<u8>;
+    // type key-elem = hash;
+    type key-elem = string;
+    variant node-key {
+        account-asset(tuple<key-elem, key-elem>),
+    }
+    variant fuzzy-node-key {
+        account-asset(tuple<option<key-elem>, option<key-elem>>),
+    }
+
+    resource host-node-key {
+        constructor(wit: node-key);
+        as-wit: func() -> node-key;
+    }
+}
+
+interface read {
+    use general.{fuzzy-node-key};
+
+    type read-set = list<read-entry>;
+
+    record read-entry {
+        key: fuzzy-node-key,
+        value: node-value-read,
+    }
+
+    variant node-value-read {
+        account-asset,
+    }
+}
+
+interface view {
+    use general.{node-key};
+
+    type view-set = list<view-entry>;
+
+    record view-entry {
+        key: node-key,
+        value: node-value-view,
+    }
+
+    variant node-value-view {
+        account-asset(account-asset-v),
+    }
+
+    record account-asset-v {
+        balance: u32,
+    }
+}
+
+interface write {
+    use general.{node-key};
+
+    type write-set = list<write-entry>;
+
+    record write-entry {
+        key: node-key,
+        value: node-value-write,
+    }
+
+    variant node-value-write {
+        account-asset(account-asset-w),
+    }
+
+    variant account-asset-w {
+        send(u32),
+        receive(u32),
+    }
+}
+
+world types {
+    export general;
+    export read;
+    export view;
+    export write;
+}

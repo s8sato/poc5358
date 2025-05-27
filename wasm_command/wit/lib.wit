@@ -44,7 +44,10 @@ world lib {
     type state-view = list<view-entry>;
     type write-set = list<write-entry>;
 
-    record context {}
+    record context {
+        height: u64,
+        timestamp: u64,
+    }
 
     type json = string;
 
