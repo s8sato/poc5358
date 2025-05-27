@@ -1,5 +1,5 @@
 [package]
-name = "wasm_command"
+name = "command"
 version.workspace = true
 edition.workspace = true
 

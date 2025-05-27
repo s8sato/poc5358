@@ -1,4 +1,4 @@
-package wit:types;
+package wit:common;
 
 interface general {
     record context {
@@ -78,7 +78,7 @@ interface write {
     }
 }
 
-world types {
+world common {
     export general;
     export read;
     export view;

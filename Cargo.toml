@@ -6,13 +6,12 @@ edition = "2024"
 [workspace]
 members = [
     "host",
-    "wasm_command",
-    "authorizer",
-    "common",
+    "guest/common",
+    "guest/command",
 ]
 
 [workspace.dependencies]
-common = { path = "common" }
+common = { path = "guest/common" }
 host = { path = "host" }
 
 serde = { version = "1.0", features = ["derive"] }

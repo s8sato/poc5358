@@ -1,27 +1,28 @@
 use std::marker::PhantomData;
 
 wit_bindgen::generate!({
-    world: "types",
+    world: "common",
+    path: "../../wit/deps",
     // additional_derives: [Debug, Clone, PartialEq, Eq],
 });
 
-struct Types;
+struct Common;
 
-impl exports::wit::types::general::Guest for Types {
+impl exports::wit::common::general::Guest for Common {
     type HostNodeKey = host::NodeKey;
 }
 
-impl exports::wit::types::general::GuestHostNodeKey for host::NodeKey {
-    fn new(_wit: exports::wit::types::general::NodeKey) -> Self {
+impl exports::wit::common::general::GuestHostNodeKey for host::NodeKey {
+    fn new(_wit: exports::wit::common::general::NodeKey) -> Self {
         host::NodeKey
     }
 
-    fn as_wit(&self) -> exports::wit::types::general::NodeKey {
-        exports::wit::types::general::NodeKey::AccountAsset((String::new(), String::new()))
+    fn as_wit(&self) -> exports::wit::common::general::NodeKey {
+        exports::wit::common::general::NodeKey::AccountAsset((String::new(), String::new()))
     }
 }
 
-export!(Types);
+export!(Common);
 
 pub trait Wit: Sized {
     type WitType: From<Self> + Into<Self>;

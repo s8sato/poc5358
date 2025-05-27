@@ -41,10 +41,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "authorizer"
-version = "0.1.0"
-
-[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -108,6 +104,16 @@ name = "cobs"
 version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "67ba02a97a2bd10f4b59b25c7973101c79642302776489e030cd13cdab09ed15"
+
+[[package]]
+name = "command"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "serde",
+ "serde_json",
+ "wit-bindgen",
+]
 
 [[package]]
 name = "common"
@@ -1297,16 +1303,6 @@ dependencies = [
  "indexmap",
  "wasm-encoder 0.230.0",
  "wasmparser 0.230.0",
-]
-
-[[package]]
-name = "wasm_command"
-version = "0.1.0"
-dependencies = [
- "common",
- "serde",
- "serde_json",
- "wit-bindgen",
 ]
 
 [[package]]
