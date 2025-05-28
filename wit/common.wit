@@ -1,5 +1,3 @@
-package wit:common;
-
 interface general {
     record context {
         height: u64,

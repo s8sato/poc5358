@@ -1,0 +1,12 @@
+[package]
+name = "authorizer"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+common = { workspace = true }
+
+wit-bindgen = { workspace = true}

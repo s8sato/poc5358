@@ -3,10 +3,9 @@ use serde::Deserialize;
 wit_bindgen::generate!({
     world: "command",
     path: "../../wit",
-    generate_all,
 });
 
-use wit::common::{general, read, view, write};
+use poc::wit::{general, read, view, write};
 
 struct SupplyAll;
 

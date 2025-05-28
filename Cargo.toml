@@ -8,6 +8,7 @@ members = [
     "host",
     "guest/common",
     "guest/command",
+    "guest/authorizer",
 ]
 
 [workspace.dependencies]

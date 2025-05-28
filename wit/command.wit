@@ -1,10 +1,8 @@
-package wit:command;
-
 world command {
-    use wit:common/general.{context, json};
-    use wit:common/read.{read-set};
-    use wit:common/view.{view-set};
-    use wit:common/write.{write-set};
+    use general.{context, json};
+    use read.{read-set};
+    use view.{view-set};
+    use write.{write-set};
 
     export read-request: func(ctx: context, args: json) -> read-set;
     // export read-request: func() -> read-set;

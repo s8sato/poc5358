@@ -41,6 +41,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "authorizer"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "wit-bindgen",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
