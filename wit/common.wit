@@ -16,9 +16,9 @@ interface general {
         account-asset(tuple<option<key-elem>, option<key-elem>>),
     }
 
-    resource host-node-key {
-        constructor(wit: node-key);
-        as-wit: func() -> node-key;
+    resource host-key-elem {
+        constructor(wit: key-elem);
+        as-wit: func() -> key-elem;
     }
 }
 
@@ -34,6 +34,11 @@ interface read {
 
     variant node-value-read {
         account-asset,
+    }
+
+    resource host-read-set {
+        constructor(wit: read-set);
+        as-wit: func() -> read-set;
     }
 }
 
@@ -54,6 +59,11 @@ interface view {
     record account-asset-v {
         balance: u32,
     }
+
+    resource host-view-set {
+        constructor(wit: view-set);
+        as-wit: func() -> view-set;
+    }
 }
 
 interface write {
@@ -73,6 +83,11 @@ interface write {
     variant account-asset-w {
         send(u32),
         receive(u32),
+    }
+
+    resource host-write-set {
+        constructor(wit: write-set);
+        as-wit: func() -> write-set;
     }
 }
 

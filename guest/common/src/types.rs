@@ -1,58 +1,146 @@
-use std::marker::PhantomData;
-
 wit_bindgen::generate!({
     world: "common",
     path: "../../wit",
     // additional_derives: [Debug, Clone, PartialEq, Eq],
 });
 
-use exports::poc::wit;
+use exports::poc::wit::{self, general::*, read::*, view::*, write::*};
 use host::prelude as host;
 
-mod general {
-    use super::*;
-    use wit::general::*;
+pub struct Common;
 
-    pub struct General;
+impl wit::general::Guest for Common {
+    type HostKeyElem = host::KeyElem;
+}
 
-    impl Guest for General {
-        type HostNodeKey = host::NodeKey;
+impl GuestHostKeyElem for host::KeyElem {
+    fn new(wit: KeyElem) -> Self {
+        wit
     }
 
-    impl GuestHostNodeKey for host::NodeKey {
-        fn new(wit: NodeKey) -> Self {
-            let NodeKey::AccountAsset((account, asset)) = wit;
-            host::NodeKey::AccountAsset((account, asset))
-        }
-
-        fn as_wit(&self) -> NodeKey {
-            let host::NodeKey::AccountAsset((account, asset)) = self;
-            NodeKey::AccountAsset((account.clone(), asset.clone()))
-        }
+    fn as_wit(&self) -> KeyElem {
+        self.clone()
     }
 }
 
-use general::General;
-
-export!(General);
-
-pub trait Wit: Sized {
-    type WitType: From<Self> + Into<Self>;
+impl wit::read::Guest for Common {
+    type HostReadSet = host::ReadSet;
 }
 
-pub struct Tree<T: Mode>(PhantomData<T>);
+impl GuestHostReadSet for host::ReadSet {
+    fn new(wit: ReadSet) -> Self {
+        let inner = wit
+            .into_iter()
+            .map(|entry| {
+                let wit::general::FuzzyNodeKey::AccountAsset(k) = entry.key;
+                (
+                    host::FuzzyNodeKey::AccountAsset(k),
+                    host::NodeValue::AccountAsset(host::AccountAssetR),
+                )
+            })
+            .collect();
 
-pub trait Mode {}
+        host::FuzzyTree(inner)
+    }
 
-pub struct Read;
-pub struct View;
-pub struct Write;
+    fn as_wit(&self) -> ReadSet {
+        self.0
+            .clone()
+            .into_iter()
+            .map(|(key, _value)| {
+                let host::FuzzyNodeKey::AccountAsset(k) = key;
+                ReadEntry {
+                    key: wit::general::FuzzyNodeKey::AccountAsset(k),
+                    value: NodeValueRead::AccountAsset,
+                }
+            })
+            .collect()
+    }
+}
 
-impl Mode for Read {}
-impl Mode for View {}
-impl Mode for Write {}
+impl wit::view::Guest for Common {
+    type HostViewSet = host::ViewSet;
+}
 
-pub struct Context;
-pub type ReadSet = Tree<Read>;
-pub type ViewSet = Tree<View>;
-pub type WriteSet = Tree<Write>;
+impl GuestHostViewSet for host::ViewSet {
+    fn new(wit: ViewSet) -> Self {
+        let inner = wit
+            .into_iter()
+            .map(|entry| {
+                let wit::general::NodeKey::AccountAsset(k) = entry.key;
+                let NodeValueView::AccountAsset(AccountAssetV { balance }) = entry.value;
+                (
+                    host::NodeKey::AccountAsset(k),
+                    host::NodeValue::AccountAsset(host::AccountAssetV { balance }),
+                )
+            })
+            .collect();
+
+        host::Tree(inner)
+    }
+
+    fn as_wit(&self) -> ViewSet {
+        self.0
+            .clone()
+            .into_iter()
+            .map(|(key, value)| {
+                let host::NodeKey::AccountAsset(k) = key;
+                let host::NodeValue::AccountAsset(host::AccountAssetV { balance }) = value;
+                ViewEntry {
+                    key: wit::general::NodeKey::AccountAsset(k),
+                    value: NodeValueView::AccountAsset(AccountAssetV { balance }),
+                }
+            })
+            .collect()
+    }
+}
+
+impl wit::write::Guest for Common {
+    type HostWriteSet = host::WriteSet;
+}
+
+impl GuestHostWriteSet for host::WriteSet {
+    fn new(wit: WriteSet) -> Self {
+        let inner = wit
+            .into_iter()
+            .map(|entry| {
+                let wit::general::NodeKey::AccountAsset(k) = entry.key;
+                let value = match entry.value {
+                    NodeValueWrite::AccountAsset(AccountAssetW::Receive(amount)) => {
+                        host::NodeValue::AccountAsset(host::AccountAssetW::Receive(amount))
+                    }
+                    NodeValueWrite::AccountAsset(AccountAssetW::Send(amount)) => {
+                        host::NodeValue::AccountAsset(host::AccountAssetW::Send(amount))
+                    }
+                };
+                (host::NodeKey::AccountAsset(k), value)
+            })
+            .collect();
+
+        host::Tree(inner)
+    }
+
+    fn as_wit(&self) -> WriteSet {
+        self.0
+            .clone()
+            .into_iter()
+            .map(|(key, value)| {
+                let host::NodeKey::AccountAsset(k) = key;
+                let value = match value {
+                    host::NodeValue::AccountAsset(host::AccountAssetW::Receive(amount)) => {
+                        NodeValueWrite::AccountAsset(AccountAssetW::Receive(amount))
+                    }
+                    host::NodeValue::AccountAsset(host::AccountAssetW::Send(amount)) => {
+                        NodeValueWrite::AccountAsset(AccountAssetW::Send(amount))
+                    }
+                };
+                WriteEntry {
+                    key: wit::general::NodeKey::AccountAsset(k),
+                    value,
+                }
+            })
+            .collect()
+    }
+}
+
+export!(Common);
