@@ -7,24 +7,27 @@ wit_bindgen::generate!({
 });
 
 use exports::poc::wit;
+use host::prelude as host;
 
 mod general {
     use super::*;
-    use wit::general;
+    use wit::general::*;
 
     pub struct General;
 
-    impl general::Guest for General {
+    impl Guest for General {
         type HostNodeKey = host::NodeKey;
     }
 
-    impl general::GuestHostNodeKey for host::NodeKey {
-        fn new(_wit: general::NodeKey) -> Self {
-            host::NodeKey
+    impl GuestHostNodeKey for host::NodeKey {
+        fn new(wit: NodeKey) -> Self {
+            let NodeKey::AccountAsset((account, asset)) = wit;
+            host::NodeKey::AccountAsset((account, asset))
         }
 
-        fn as_wit(&self) -> general::NodeKey {
-            general::NodeKey::AccountAsset((String::new(), String::new()))
+        fn as_wit(&self) -> NodeKey {
+            let host::NodeKey::AccountAsset((account, asset)) = self;
+            NodeKey::AccountAsset((account.clone(), asset.clone()))
         }
     }
 }

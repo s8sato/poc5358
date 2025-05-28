@@ -1,4 +1,4 @@
-use super::*;
+use crate::prelude::*;
 
 enum Command {
     Builtin(BuiltinCommand),
@@ -36,7 +36,7 @@ struct Reading {
 
 struct HasRead {
     wasmtime: Wasmtime,
-    result: StateView,
+    result: ViewSet,
 }
 
 struct ToWrite {
