@@ -1,53 +1,79 @@
+use std::collections::BTreeMap;
+
 use crate::prelude::*;
 
-pub struct State(ViewSet);
+trait WorldState {
+    fn new() -> Self;
+    fn read(&self, request: &ReadSet) -> ViewSet;
+    fn write(&mut self, request: WriteSet);
+}
 
-impl State {
-    pub fn new() -> Self {
-        Self(Tree(Default::default()))
+pub struct World {
+    pub account_asset: BTreeMap<AccountAssetK, AccountAssetV>,
+}
+
+impl WorldState for World {
+    fn new() -> Self {
+        Self {
+            account_asset: BTreeMap::new(),
+        }
     }
 
-    pub fn read(&self, request: &ReadSet) -> ViewSet {
-        let inner = self
-            .0
-            .0
-            .clone()
-            .into_iter()
-            .filter(|(k, _v)| {
-                k.super_keys()
-                    .any(|super_key| request.0.keys().any(|key| *key == super_key))
+    fn read(&self, request: &ReadSet) -> ViewSet {
+        let keys: Vec<&AccountAssetK> = self
+            .account_asset
+            .keys()
+            .filter(|key| {
+                request
+                    .0
+                    .keys()
+                    .any(|FuzzyNodeKey::AccountAsset(capture)| capture.captures(key))
+            })
+            .collect();
+        let map = self
+            .account_asset
+            .iter()
+            .filter(|(key, _)| keys.contains(key))
+            .map(|(k, v)| {
+                (
+                    NodeKey::AccountAsset(k.clone()),
+                    NodeValue::AccountAsset(v.clone()),
+                )
             })
             .collect();
 
-        Tree(inner)
+        Tree(map)
     }
 
-    pub fn write(&mut self, request: WriteSet) {
-        request.0.into_iter().for_each(|(k, v)| match v {
-            NodeValue::AccountAsset(AccountAssetW::Receive(amount)) => {
-                self.0
-                    .0
-                    .entry(k)
-                    .and_modify(|existing| {
-                        let NodeValue::AccountAsset(AccountAssetV { balance }) = existing;
-                        *balance = balance.saturating_add(amount);
-                    })
-                    .or_insert_with(|| NodeValue::AccountAsset(AccountAssetV { balance: amount }));
-            }
-            NodeValue::AccountAsset(AccountAssetW::Send(amount)) => {
-                self.0
-                    .0
-                    .entry(k)
-                    .and_modify(|existing| {
-                        let NodeValue::AccountAsset(AccountAssetV { balance }) = existing;
-                        *balance = balance.checked_sub(amount).unwrap_or_else(|| {
-                            panic!("Cannot send more than the balance");
-                        });
-                    })
-                    .or_insert_with(|| {
-                        panic!("Cannot send from no balance");
-                    });
-            }
-        })
+    fn write(&mut self, request: WriteSet) {
+        request
+            .0
+            .into_iter()
+            .for_each(
+                |(NodeKey::AccountAsset(k), NodeValue::AccountAsset(v))| match v {
+                    AccountAssetW::Receive(amount) => {
+                        self.account_asset
+                            .entry(k)
+                            .and_modify(|existing| {
+                                let AccountAssetV { balance } = existing;
+                                *balance = balance.saturating_add(amount);
+                            })
+                            .or_insert_with(|| AccountAssetV { balance: amount });
+                    }
+                    AccountAssetW::Send(amount) => {
+                        self.account_asset
+                            .entry(k)
+                            .and_modify(|existing| {
+                                let AccountAssetV { balance } = existing;
+                                *balance = balance.checked_sub(amount).unwrap_or_else(|| {
+                                    panic!("Cannot send more than the balance");
+                                });
+                            })
+                            .or_insert_with(|| {
+                                panic!("Cannot send from no balance");
+                            });
+                    }
+                },
+            )
     }
 }

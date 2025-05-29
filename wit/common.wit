@@ -9,11 +9,30 @@ interface general {
     // type hash = list<u8>;
     // type key-elem = hash;
     type key-elem = string;
+
+    record single-key {
+        e0: key-elem,
+    }
+    record composite-key {
+        e0: key-elem,
+        e1: key-elem,
+    }
+    type account-asset-k = composite-key;
+
+    record fuzzy-single-key {
+        e0: option<key-elem>,
+    }
+    record fuzzy-composite-key {
+        e0: option<key-elem>,
+        e1: option<key-elem>,
+    }
+    type fuzzy-account-asset-k = fuzzy-composite-key;
+
     variant node-key {
-        account-asset(tuple<key-elem, key-elem>),
+        account-asset(account-asset-k),
     }
     variant fuzzy-node-key {
-        account-asset(tuple<option<key-elem>, option<key-elem>>),
+        account-asset(fuzzy-account-asset-k),
     }
 
     resource host-key-elem {

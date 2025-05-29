@@ -34,7 +34,7 @@ impl GuestHostReadSet for host::ReadSet {
             .map(|entry| {
                 let wit::general::FuzzyNodeKey::AccountAsset(k) = entry.key;
                 (
-                    host::FuzzyNodeKey::AccountAsset(k),
+                    host::FuzzyNodeKey::AccountAsset(host::FuzzyCompositeKey(k.e0, k.e1)),
                     host::NodeValue::AccountAsset(host::AccountAssetR),
                 )
             })
@@ -48,9 +48,11 @@ impl GuestHostReadSet for host::ReadSet {
             .clone()
             .into_iter()
             .map(|(key, _value)| {
-                let host::FuzzyNodeKey::AccountAsset(k) = key;
+                let host::FuzzyNodeKey::AccountAsset(host::FuzzyCompositeKey(e0, e1)) = key;
                 ReadEntry {
-                    key: wit::general::FuzzyNodeKey::AccountAsset(k),
+                    key: wit::general::FuzzyNodeKey::AccountAsset(
+                        wit::general::FuzzyCompositeKey { e0, e1 },
+                    ),
                     value: NodeValueRead::AccountAsset,
                 }
             })
@@ -70,7 +72,7 @@ impl GuestHostViewSet for host::ViewSet {
                 let wit::general::NodeKey::AccountAsset(k) = entry.key;
                 let NodeValueView::AccountAsset(AccountAssetV { balance }) = entry.value;
                 (
-                    host::NodeKey::AccountAsset(k),
+                    host::NodeKey::AccountAsset(host::CompositeKey(k.e0, k.e1)),
                     host::NodeValue::AccountAsset(host::AccountAssetV { balance }),
                 )
             })
@@ -84,10 +86,10 @@ impl GuestHostViewSet for host::ViewSet {
             .clone()
             .into_iter()
             .map(|(key, value)| {
-                let host::NodeKey::AccountAsset(k) = key;
+                let host::NodeKey::AccountAsset(host::CompositeKey(e0, e1)) = key;
                 let host::NodeValue::AccountAsset(host::AccountAssetV { balance }) = value;
                 ViewEntry {
-                    key: wit::general::NodeKey::AccountAsset(k),
+                    key: wit::general::NodeKey::AccountAsset(wit::general::CompositeKey { e0, e1 }),
                     value: NodeValueView::AccountAsset(AccountAssetV { balance }),
                 }
             })
@@ -113,7 +115,10 @@ impl GuestHostWriteSet for host::WriteSet {
                         host::NodeValue::AccountAsset(host::AccountAssetW::Send(amount))
                     }
                 };
-                (host::NodeKey::AccountAsset(k), value)
+                (
+                    host::NodeKey::AccountAsset(host::CompositeKey(k.e0, k.e1)),
+                    value,
+                )
             })
             .collect();
 
@@ -125,7 +130,7 @@ impl GuestHostWriteSet for host::WriteSet {
             .clone()
             .into_iter()
             .map(|(key, value)| {
-                let host::NodeKey::AccountAsset(k) = key;
+                let host::NodeKey::AccountAsset(host::CompositeKey(e0, e1)) = key;
                 let value = match value {
                     host::NodeValue::AccountAsset(host::AccountAssetW::Receive(amount)) => {
                         NodeValueWrite::AccountAsset(AccountAssetW::Receive(amount))
@@ -135,7 +140,7 @@ impl GuestHostWriteSet for host::WriteSet {
                     }
                 };
                 WriteEntry {
-                    key: wit::general::NodeKey::AccountAsset(k),
+                    key: wit::general::NodeKey::AccountAsset(wit::general::CompositeKey { e0, e1 }),
                     value,
                 }
             })

@@ -14,13 +14,25 @@ pub mod general {
     pub type KeyElem = String;
 
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct SingleKey(pub KeyElem);
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct CompositeKey(pub KeyElem, pub KeyElem);
+    pub type AccountAssetK = CompositeKey;
+
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct FuzzySingleKey(pub Option<KeyElem>);
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct FuzzyCompositeKey(pub Option<KeyElem>, pub Option<KeyElem>);
+    pub type FuzzyAccountAssetK = FuzzyCompositeKey;
+
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     pub enum NodeKey {
-        AccountAsset((KeyElem, KeyElem)),
+        AccountAsset(AccountAssetK),
     }
 
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     pub enum FuzzyNodeKey {
-        AccountAsset((Option<KeyElem>, Option<KeyElem>)),
+        AccountAsset(FuzzyAccountAssetK),
     }
 
     #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,16 +40,25 @@ pub mod general {
         AccountAsset(T::AccountAsset),
     }
 
-    impl NodeKey {
-        pub fn super_keys(&self) -> impl Iterator<Item = FuzzyNodeKey> {
-            let NodeKey::AccountAsset((account, asset)) = self;
-            [
-                FuzzyNodeKey::AccountAsset((None, None)),
-                FuzzyNodeKey::AccountAsset((None, Some(asset.clone()))),
-                FuzzyNodeKey::AccountAsset((Some(account.clone()), None)),
-                FuzzyNodeKey::AccountAsset((Some(account.clone()), Some(asset.clone()))),
-            ]
-            .into_iter()
+    pub trait Capture {
+        type Captured;
+        fn captures(&self, candidate: &Self::Captured) -> bool;
+    }
+
+    impl Capture for FuzzySingleKey {
+        type Captured = SingleKey;
+        fn captures(&self, candidate: &Self::Captured) -> bool {
+            let FuzzySingleKey(cap) = self;
+            cap.as_ref().is_none_or(|cap| candidate.0 == *cap)
+        }
+    }
+
+    impl Capture for FuzzyCompositeKey {
+        type Captured = CompositeKey;
+        fn captures(&self, candidate: &Self::Captured) -> bool {
+            let FuzzyCompositeKey(cap0, cap1) = self;
+            cap0.as_ref().is_none_or(|cap0| candidate.0 == *cap0)
+                && cap1.as_ref().is_none_or(|cap1| candidate.0 == *cap1)
         }
     }
 }

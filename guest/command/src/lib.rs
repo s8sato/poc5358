@@ -26,7 +26,10 @@ impl Guest for SupplyAll {
         let args: Args = serde_json::from_str(&args).expect("wrong args");
 
         vec![read::ReadEntry {
-            key: general::FuzzyNodeKey::AccountAsset((None, Some(format!("{}", args.asset)))),
+            key: general::FuzzyNodeKey::AccountAsset(general::FuzzyCompositeKey {
+                e0: None,
+                e1: Some(format!("{}", args.asset)),
+            }),
             value: read::NodeValueRead::AccountAsset,
         }]
     }
@@ -49,10 +52,10 @@ impl Guest for SupplyAll {
                             ),
                         },
                         write::WriteEntry {
-                            key: general::NodeKey::AccountAsset((
-                                args.supplier.clone(),
-                                args.asset.clone(),
-                            )),
+                            key: general::NodeKey::AccountAsset(general::CompositeKey {
+                                e0: args.supplier.clone(),
+                                e1: args.asset.clone(),
+                            }),
                             value: write::NodeValueWrite::AccountAsset(write::AccountAssetW::Send(
                                 args.supply_amount,
                             )),
