@@ -7,14 +7,11 @@ edition = "2024"
 resolver = "3"
 members = [
     "host",
-    "common",
     "guest/command",
     "guest/authorizer",
 ]
 
 [workspace.dependencies]
-common = { path = "common" }
-
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 # wasmtime = { version = "33.0", features = ["component-model"] }

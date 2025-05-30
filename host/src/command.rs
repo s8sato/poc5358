@@ -1,51 +1,52 @@
-use common::conversion::*;
-use common::host;
+use crate::conversion::*;
+use crate::prelude as host;
 
-enum CommandEnum {
+pub enum CommandEnum {
     Builtin(BuiltinCommand),
     Wasm(WasmCommand),
 }
 
-enum BuiltinCommand {}
+pub enum BuiltinCommand {}
 
-struct WasmCommand {
+pub struct WasmCommand {
     // TODO #5147: Reference the component compiled and registered in advance.
     // component: WasmComponentId,
-    component: WasmComponent,
-    args: String,
+    pub component: WasmComponent,
+    pub args: String,
 }
 
-type WasmComponent = wasmtime::component::Component;
+pub type WasmComponent = wasmtime::component::Component;
 
-struct Wasmtime {
+pub struct Wasmtime {
     instance: wasmtime::component::Instance,
     store: wasmtime::Store<HostState>,
 }
 
-struct HostState {
+pub struct HostState {
     args: String,
 }
 
 // --- State transition ---
 
-struct Init {
+pub fn initiate(command: WasmCommand, engine: &wasmtime::Engine) -> Init {
+    let host_state = HostState { args: command.args };
+    let mut store = wasmtime::Store::new(engine, host_state);
+    let linker = wasmtime::component::Linker::new(engine);
+    let instance = linker
+        .instantiate(&mut store, &command.component)
+        .expect("failed to instantiate component");
+    let wasmtime = Wasmtime { instance, store };
+
+    Init { wasmtime }
+}
+
+pub struct Init {
     wasmtime: Wasmtime,
 }
 
 impl Init {
-    fn new(command: WasmCommand, engine: &wasmtime::Engine) -> Self {
-        let host_state = HostState { args: command.args };
-        let mut store = wasmtime::Store::new(engine, host_state);
-        let linker = wasmtime::component::Linker::new(engine);
-        let instance = linker
-            .instantiate(&mut store, &command.component)
-            .expect("failed to instantiate component");
-        let wasmtime = Wasmtime { instance, store };
-
-        Self { wasmtime }
-    }
-
-    fn read_request(self, args: String) -> ToRead {
+    pub fn read_request(self) -> ToRead {
+        let args = self.wasmtime.store.data().args.clone();
         let Init { mut wasmtime } = self;
         let (request,) = wasmtime
             .instance
@@ -58,26 +59,26 @@ impl Init {
     }
 }
 
-struct ToRead {
+pub struct ToRead {
     wasmtime: Wasmtime,
     request: ReadSet,
 }
 
 impl ToRead {
-    fn read_approval(self) -> Result<Reading, ()> {
+    pub fn read_approval(self) -> Result<Reading, ()> {
         let ToRead { wasmtime, request } = self;
         // TODO: seek approval from the authorizer
         Ok(Reading { wasmtime, request })
     }
 }
 
-struct Reading {
+pub struct Reading {
     wasmtime: Wasmtime,
     request: ReadSet,
 }
 
 impl Reading {
-    fn read(self, state: &impl crate::state::WorldState) -> Result<HasRead, ()> {
+    pub fn read(self, state: &impl crate::state::WorldState) -> Result<HasRead, ()> {
         let Reading { wasmtime, request } = self;
         let request = host::ReadSet::from(request);
         let result = state.read(&request).into();
@@ -86,13 +87,14 @@ impl Reading {
     }
 }
 
-struct HasRead {
+pub struct HasRead {
     wasmtime: Wasmtime,
     result: ViewSet,
 }
 
 impl HasRead {
-    fn write_request(self, args: String) -> ToWrite {
+    pub fn write_request(self) -> ToWrite {
+        let args = self.wasmtime.store.data().args.clone();
         let HasRead {
             mut wasmtime,
             result,
@@ -108,24 +110,24 @@ impl HasRead {
     }
 }
 
-struct ToWrite {
+pub struct ToWrite {
     request: WriteSet,
 }
 
 impl ToWrite {
-    fn write_approval(self) -> Result<Writing, ()> {
+    pub fn write_approval(self) -> Result<Writing, ()> {
         let ToWrite { request } = self;
         // TODO: seek approval from the authorizer
         Ok(Writing { request })
     }
 }
 
-struct Writing {
+pub struct Writing {
     request: WriteSet,
 }
 
 impl Writing {
-    fn write(self, state: &mut impl crate::state::WorldState) -> Result<HasWritten, ()> {
+    pub fn write(self, state: &mut impl crate::state::WorldState) -> Result<HasWritten, ()> {
         let Writing { request } = self;
         let request = host::WriteSet::from(request);
         state.write(&request);
@@ -135,14 +137,14 @@ impl Writing {
     }
 }
 
-struct HasWritten {
+pub struct HasWritten {
     result: WriteSet,
 }
 
-// struct ToPay;
+// pub struct ToPay;
 
-// struct Paying;
+// pub struct Paying;
 
-// struct HasPaid;
+// pub struct HasPaid;
 
-struct Record;
+pub struct Record;

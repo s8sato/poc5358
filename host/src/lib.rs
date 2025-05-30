@@ -1,48 +1,97 @@
 mod command;
+mod conversion;
 mod state;
+mod types;
+
+mod prelude {
+    pub use super::types::{general::*, read::*, view::*, write::*};
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use types::{general::CompositeKey, view::AccountAssetV};
+    use wasmtime::component;
 
     #[test]
     fn it_works() {
-        // use wasmtime::component;
-        // use wasmtime::*;
+        let engine = wasmtime::Engine::default();
+        let component =
+            component::Component::from_file(&engine, "../target/wasm32-wasip2/debug/command.wasm")
+                .expect("failed to load component");
 
-        // let engine = Engine::default();
-        // let component = component::Component::from_file(
-        //     &engine,
-        //     "../target/wasm32-wasip2/debug/wasm_command.wasm",
-        // )
-        // .expect("failed to load component");
-        // let mut store = Store::new(&engine, ());
-        // let mut linker = component::Linker::new(&engine);
-        // let instance = linker
-        //     .instantiate(&mut store, &component)
-        //     .expect("failed to instantiate component");
+        let mut world = {
+            let account_asset = [
+                (
+                    CompositeKey("alice".into(), "rose".into()),
+                    AccountAssetV { balance: 500 },
+                ),
+                (
+                    CompositeKey("bob".into(), "rose".into()),
+                    AccountAssetV { balance: 110 },
+                ),
+                (
+                    CompositeKey("carol".into(), "rose".into()),
+                    AccountAssetV { balance: 100 },
+                ),
+                (
+                    CompositeKey("dave".into(), "rose".into()),
+                    AccountAssetV { balance: 90 },
+                ),
+                (
+                    CompositeKey("eve".into(), "rose".into()),
+                    AccountAssetV { balance: 80 },
+                ),
+            ]
+            .into();
+            state::World { account_asset }
+        };
+        let supply_all = command::WasmCommand {
+            component,
+            args: serde_json::json!({
+                "asset": "rose",
+                "threshold": 100,
+                "supply_amount": 50,
+                "supplier": "alice"
+            })
+            .to_string(),
+        };
 
-        // let read_request_fn = instance
-        //     .get_typed_func::<(Context, Json), ReadSet>(&mut store, "read_request")
-        //     .expect("failed to get read_request function");
-        // let write_request_fn = instance
-        //     .get_typed_func::<(ViewSet, Json), WriteSet>(&mut store, "write_request")
-        //     .expect("failed to get write_request function");
+        command::initiate(supply_all, &engine)
+            .read_request()
+            .read_approval()
+            .expect("read request rejected")
+            .read(&world)
+            .expect("failed to read")
+            .write_request()
+            .write_approval()
+            .expect("write request rejected")
+            .write(&mut world)
+            .expect("failed to write");
 
-        // let args = serde_json::json!({
-        //     "asset": "rose",
-        //     "threshold": 100,
-        //     "supply_amount": 50,
-        //     "supplier": "alice"
-        // });
-        // let read_request = read_request_fn
-        //     .call(&mut store, (Context::default(), args.to_string()))
-        //     .expect("failed to call read_request function");
-        // dbg!(&read_request);
-        // let view_set;
-        // let write_request = write_request_fn
-        //     .call(&mut store, (view_set, args.to_string()))
-        //     .expect("failed to call write_request function");
-        // dbg!(&write_request);
+        let expected = [
+            (
+                CompositeKey("alice".into(), "rose".into()),
+                AccountAssetV { balance: 400 },
+            ),
+            (
+                CompositeKey("bob".into(), "rose".into()),
+                AccountAssetV { balance: 110 },
+            ),
+            (
+                CompositeKey("carol".into(), "rose".into()),
+                AccountAssetV { balance: 100 },
+            ),
+            (
+                CompositeKey("dave".into(), "rose".into()),
+                AccountAssetV { balance: 140 },
+            ),
+            (
+                CompositeKey("eve".into(), "rose".into()),
+                AccountAssetV { balance: 130 },
+            ),
+        ];
+
+        assert_eq!(world.account_asset, expected.into());
     }
 }

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use common::host::*;
+use crate::prelude::*;
 
 pub trait WorldState {
     fn new() -> Self;

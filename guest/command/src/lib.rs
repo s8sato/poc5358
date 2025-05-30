@@ -1,11 +1,10 @@
+use poc::wit::{general, read::*, view::*, write::*};
 use serde::Deserialize;
 
 wit_bindgen::generate!({
     world: "command",
     path: "../../wit",
 });
-
-use poc::wit::{general, read::*, view::*, write::*};
 
 struct SupplyAll;
 

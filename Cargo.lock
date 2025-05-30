@@ -44,7 +44,6 @@ dependencies = [
 name = "authorizer"
 version = "0.1.0"
 dependencies = [
- "common",
  "wit-bindgen",
 ]
 
@@ -117,17 +116,8 @@ checksum = "67ba02a97a2bd10f4b59b25c7973101c79642302776489e030cd13cdab09ed15"
 name = "command"
 version = "0.1.0"
 dependencies = [
- "common",
  "serde",
  "serde_json",
- "wit-bindgen",
-]
-
-[[package]]
-name = "common"
-version = "0.1.0"
-dependencies = [
- "wasmtime",
  "wit-bindgen",
 ]
 
@@ -599,7 +589,6 @@ checksum = "2304e00983f87ffb38b55b444b5e3b60a884b5d30c0fca7d82fe33449bbe55ea"
 name = "host"
 version = "0.1.0"
 dependencies = [
- "common",
  "serde",
  "serde_json",
  "wasmtime",
