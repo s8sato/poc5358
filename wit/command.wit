@@ -1,11 +1,10 @@
 world command {
-    use general.{context, json};
     use read.{read-set};
     use view.{view-set};
     use write.{write-set};
 
-    export read-request: func(ctx: context, args: json) -> read-set;
+    export read-request: func(args: string) -> read-set;
     // export read-request: func() -> read-set;
-    export write-request: func(view: view-set, args: json) -> write-set;
+    export write-request: func(view: view-set, args: string) -> write-set;
     // export write-request: func() -> write-set;
 }

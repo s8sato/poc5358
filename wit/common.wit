@@ -4,8 +4,6 @@ interface general {
         timestamp: u64,
     }
 
-    type json = string;
-
     // type hash = list<u8>;
     // type key-elem = hash;
     type key-elem = string;
@@ -34,17 +32,14 @@ interface general {
     variant fuzzy-node-key {
         account-asset(fuzzy-account-asset-k),
     }
-
-    resource host-key-elem {
-        constructor(wit: key-elem);
-        as-wit: func() -> key-elem;
-    }
 }
 
 interface read {
     use general.{fuzzy-node-key};
 
-    type read-set = list<read-entry>;
+    record read-set {
+        inner: list<read-entry>,
+    }
 
     record read-entry {
         key: fuzzy-node-key,
@@ -54,17 +49,14 @@ interface read {
     variant node-value-read {
         account-asset,
     }
-
-    resource host-read-set {
-        constructor(wit: read-set);
-        as-wit: func() -> read-set;
-    }
 }
 
 interface view {
     use general.{node-key};
 
-    type view-set = list<view-entry>;
+    record view-set {
+        inner: list<view-entry>,
+    }
 
     record view-entry {
         key: node-key,
@@ -78,17 +70,14 @@ interface view {
     record account-asset-v {
         balance: u32,
     }
-
-    resource host-view-set {
-        constructor(wit: view-set);
-        as-wit: func() -> view-set;
-    }
 }
 
 interface write {
     use general.{node-key};
 
-    type write-set = list<write-entry>;
+    record write-set {
+        inner: list<write-entry>,
+    }
 
     record write-entry {
         key: node-key,
@@ -102,11 +91,6 @@ interface write {
     variant account-asset-w {
         send(u32),
         receive(u32),
-    }
-
-    resource host-write-set {
-        constructor(wit: write-set);
-        as-wit: func() -> write-set;
     }
 }
 

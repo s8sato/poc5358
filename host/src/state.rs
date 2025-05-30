@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
 
-use crate::prelude::*;
+use common::host::*;
 
-trait WorldState {
+pub trait WorldState {
     fn new() -> Self;
     fn read(&self, request: &ReadSet) -> ViewSet;
-    fn write(&mut self, request: WriteSet);
+    fn write(&mut self, request: &WriteSet);
 }
 
 pub struct World {
@@ -45,35 +45,32 @@ impl WorldState for World {
         Tree(map)
     }
 
-    fn write(&mut self, request: WriteSet) {
-        request
-            .0
-            .into_iter()
-            .for_each(
-                |(NodeKey::AccountAsset(k), NodeValue::AccountAsset(v))| match v {
-                    AccountAssetW::Receive(amount) => {
-                        self.account_asset
-                            .entry(k)
-                            .and_modify(|existing| {
-                                let AccountAssetV { balance } = existing;
-                                *balance = balance.saturating_add(amount);
-                            })
-                            .or_insert_with(|| AccountAssetV { balance: amount });
-                    }
-                    AccountAssetW::Send(amount) => {
-                        self.account_asset
-                            .entry(k)
-                            .and_modify(|existing| {
-                                let AccountAssetV { balance } = existing;
-                                *balance = balance.checked_sub(amount).unwrap_or_else(|| {
-                                    panic!("Cannot send more than the balance");
-                                });
-                            })
-                            .or_insert_with(|| {
-                                panic!("Cannot send from no balance");
+    fn write(&mut self, request: &WriteSet) {
+        request.0.iter().for_each(
+            |(NodeKey::AccountAsset(k), NodeValue::AccountAsset(v))| match v {
+                AccountAssetW::Receive(amount) => {
+                    self.account_asset
+                        .entry(k.clone())
+                        .and_modify(|existing| {
+                            let AccountAssetV { balance } = existing;
+                            *balance = balance.saturating_add(*amount);
+                        })
+                        .or_insert_with(|| AccountAssetV { balance: *amount });
+                }
+                AccountAssetW::Send(amount) => {
+                    self.account_asset
+                        .entry(k.clone())
+                        .and_modify(|existing| {
+                            let AccountAssetV { balance } = existing;
+                            *balance = balance.checked_sub(*amount).unwrap_or_else(|| {
+                                panic!("Cannot send more than the balance");
                             });
-                    }
-                },
-            )
+                        })
+                        .or_insert_with(|| {
+                            panic!("Cannot send from no balance");
+                        });
+                }
+            },
+        )
     }
 }

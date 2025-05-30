@@ -5,7 +5,7 @@ wit_bindgen::generate!({
     path: "../../wit",
 });
 
-use poc::wit::{general, read, view, write};
+use poc::wit::{general, read::*, view::*, write::*};
 
 struct SupplyAll;
 
@@ -22,41 +22,45 @@ struct Args {
 }
 
 impl Guest for SupplyAll {
-    fn read_request(_ctx: Context, args: Json) -> ReadSet {
+    fn read_request(args: String) -> ReadSet {
         let args: Args = serde_json::from_str(&args).expect("wrong args");
 
-        vec![read::ReadEntry {
+        let inner = vec![ReadEntry {
             key: general::FuzzyNodeKey::AccountAsset(general::FuzzyCompositeKey {
                 e0: None,
                 e1: Some(format!("{}", args.asset)),
             }),
-            value: read::NodeValueRead::AccountAsset,
-        }]
+            value: NodeValueRead::AccountAsset,
+        }];
+
+        ReadSet { inner }
     }
 
-    fn write_request(view: view::ViewSet, args: Json) -> WriteSet {
+    fn write_request(view: ViewSet, args: String) -> WriteSet {
         let args: Args = serde_json::from_str(&args).expect("wrong args");
 
-        view.into_iter()
+        let inner = view
+            .inner
+            .into_iter()
             .filter_map(|entry| {
                 #[expect(irrefutable_let_patterns)]
-                let view::NodeValueView::AccountAsset(value) = entry.value else {
+                let NodeValueView::AccountAsset(value) = entry.value else {
                     panic!("unexpected value type");
                 };
                 (value.balance < args.threshold).then(|| {
                     vec![
-                        write::WriteEntry {
+                        WriteEntry {
                             key: entry.key,
-                            value: write::NodeValueWrite::AccountAsset(
-                                write::AccountAssetW::Receive(args.supply_amount),
-                            ),
+                            value: NodeValueWrite::AccountAsset(AccountAssetW::Receive(
+                                args.supply_amount,
+                            )),
                         },
-                        write::WriteEntry {
+                        WriteEntry {
                             key: general::NodeKey::AccountAsset(general::CompositeKey {
                                 e0: args.supplier.clone(),
                                 e1: args.asset.clone(),
                             }),
-                            value: write::NodeValueWrite::AccountAsset(write::AccountAssetW::Send(
+                            value: NodeValueWrite::AccountAsset(AccountAssetW::Send(
                                 args.supply_amount,
                             )),
                         },
@@ -64,7 +68,9 @@ impl Guest for SupplyAll {
                 })
             })
             .flatten()
-            .collect()
+            .collect();
+
+        WriteSet { inner }
     }
 }
 
