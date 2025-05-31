@@ -5,6 +5,10 @@ This proof-of-concept explores splitting Hyperledger Iroha’s _Executor_ into m
 - <https://github.com/hyperledger-iroha/iroha/issues/5357>
 - <https://github.com/hyperledger-iroha/iroha/issues/5358> (see state-transition diagram)
 
+These occupy a key position within tracking issue [#5356](https://github.com/hyperledger-iroha/iroha/issues/5356):
+
+![big_picture_in_5356.png](big_picture_in_5356.png)
+
 ## Objective
 
 Can we cleanly separate instruction execution into three roles?
@@ -52,7 +56,11 @@ cargo build --target wasm32-wasip2 --manifest-path guest/authorizer/Cargo.toml
 ### Host tests
 
 ```bash
-cargo test --package host --lib -- tests::instruction_flow --exact --show-output 
+cargo test --package host --lib
+```
+
+```bash
+cargo test --package host --lib -- tests::instruction_flows --exact --show-output
 ```
 
 Compare the test steps to the #5358 state-transition diagram for clarity.
@@ -64,9 +72,10 @@ Compare the test steps to the #5358 state-transition diagram for clarity.
 - `wasmtime::component::bindgen!` is used on the _host_ side to implement _import_ functions.
 - `wit_bindgen::generate!` is used on the _guest_ side to implement _export_ functions.
 
-### Component model trade-offs
+### [Component model](https://component-model.bytecodealliance.org/introduction.html) trade-offs
 
-- Removes all `unsafe` blocks around FFI calls, making maintenance easier.
+- Removes all `unsafe` blocks around FFI calls, making future development and maintenance easier:
+  > By expressing higher-level semantics than integers and floats, it becomes possible to statically analyse and reason about a component's behaviour - to enforce and guarantee properties just by looking at the surface of the component.
 - Wasm _components_ typically produce larger binaries than classic _modules_—keep that in mind.
 
 ### Future developer experience

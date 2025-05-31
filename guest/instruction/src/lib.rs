@@ -2,7 +2,7 @@ use poc::wit::types::*;
 use serde::Deserialize;
 
 wit_bindgen::generate!({
-    world: "instruction",
+    world: "universe",
     path: "../../wit",
 });
 
@@ -33,6 +33,10 @@ impl Guest for SupplyAll {
         }];
 
         ReadSet { inner }
+    }
+
+    fn read_approval(_signals: ReadSet, _receptors: AllowSet) -> bool {
+        unimplemented!("boilerplate");
     }
 
     fn write_request(view: ViewSet, args: String) -> WriteSet {
@@ -67,6 +71,10 @@ impl Guest for SupplyAll {
             .collect();
 
         WriteSet { inner }
+    }
+
+    fn write_approval(_signals: EventSet, _receptors: AllowSet) -> bool {
+        unimplemented!("boilerplate");
     }
 }
 

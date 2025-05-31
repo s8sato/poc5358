@@ -1,6 +1,10 @@
 package poc:wit;
 
 world universe {
-    include instruction;
-    // include authorizer;
+    use types.{read-set, view-set, write-set, event-set, allow-set};
+
+    export read-request: func(args: string) -> read-set;
+    export read-approval: func(signals: read-set, receptors: allow-set) -> bool;
+    export write-request: func(view: view-set, args: string) -> write-set;
+    export write-approval: func(signals: event-set, receptors: allow-set) -> bool;
 }

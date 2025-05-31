@@ -93,4 +93,47 @@ interface types {
         send(u32),
         receive(u32),
     }
+// }
+
+// interface event {
+    // use general.{node-key};
+
+    record event-set {
+        inner: list<event-entry>,
+
+    }
+
+    record event-entry {
+        key: node-key,
+        value: node-value-event,
+    }
+
+    variant node-value-event {
+        account-asset(account-asset-e),
+    }
+
+    record account-asset-e {
+        status-bit: u8,
+    }
+// }
+
+// interface allow {
+    // use general.{node-key};
+
+    record allow-set {
+        inner: list<allow-entry>,
+    }
+
+    record allow-entry {
+        key: fuzzy-node-key,
+        value: node-value-allow,
+    }
+
+    variant node-value-allow {
+        account-asset(account-asset-a),
+    }
+
+    record account-asset-a {
+        bit-mask: u8,
+    }
 }
