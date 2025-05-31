@@ -2,7 +2,7 @@ use poc::wit::types::*;
 use serde::Deserialize;
 
 wit_bindgen::generate!({
-    world: "command",
+    world: "instruction",
     path: "../../wit",
 });
 

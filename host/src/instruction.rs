@@ -5,14 +5,14 @@ use crate::prelude as host;
 
 use wasmtime_wasi::p2;
 
-pub enum CommandEnum {
-    Builtin(BuiltinCommand),
-    Wasm(WasmCommand),
+pub enum InstructionEnum {
+    Builtin(BuiltinInstruction),
+    Wasm(WasmInstruction),
 }
 
-pub enum BuiltinCommand {}
+pub enum BuiltinInstruction {}
 
-pub struct WasmCommand {
+pub struct WasmInstruction {
     // TODO #5147: Reference the component compiled and registered in advance.
     // component: WasmComponentId,
     pub component: WasmComponent,
@@ -23,10 +23,10 @@ pub type WasmComponent = wasmtime::component::Component;
 
 pub struct Wasmtime {
     universe: bindings::Universe,
-    store: wasmtime::Store<CommandState>,
+    store: wasmtime::Store<InstructionState>,
 }
 
-pub struct CommandState {
+pub struct InstructionState {
     pub host: HostState,
     pub wasi: p2::WasiCtx,
     pub resource_table: wasmtime_wasi::ResourceTable,
@@ -36,26 +36,28 @@ pub struct HostState {
     args: String,
 }
 
-impl p2::IoView for CommandState {
+impl p2::IoView for InstructionState {
     fn table(&mut self) -> &mut wasmtime_wasi::ResourceTable {
         &mut self.resource_table
     }
 }
-impl p2::WasiView for CommandState {
+impl p2::WasiView for InstructionState {
     fn ctx(&mut self) -> &mut p2::WasiCtx {
         &mut self.wasi
     }
 }
 
-impl bindings::poc::wit::types::Host for CommandState {}
+impl bindings::poc::wit::types::Host for InstructionState {}
 
 // --- State transition ---
 
-pub fn initiate(command: WasmCommand, engine: &wasmtime::Engine) -> Init {
-    let host = HostState { args: command.args };
+pub fn initiate(instruction: WasmInstruction, engine: &wasmtime::Engine) -> Init {
+    let host = HostState {
+        args: instruction.args,
+    };
     let mut store = wasmtime::Store::new(
         engine,
-        CommandState {
+        InstructionState {
             host,
             wasi: p2::WasiCtxBuilder::new().build(),
             resource_table: wasmtime_wasi::ResourceTable::new(),
@@ -64,10 +66,10 @@ pub fn initiate(command: WasmCommand, engine: &wasmtime::Engine) -> Init {
 
     let mut linker = wasmtime::component::Linker::new(engine);
     p2::add_to_linker_sync(&mut linker).expect("failed to add WASI bindings to linker");
-    bindings::Universe::add_to_linker(&mut linker, |state: &mut CommandState| state)
+    bindings::Universe::add_to_linker(&mut linker, |state: &mut InstructionState| state)
         .expect("failed to add bindings to linker");
 
-    let universe = bindings::Universe::instantiate(&mut store, &command.component, &linker)
+    let universe = bindings::Universe::instantiate(&mut store, &instruction.component, &linker)
         .expect("failed to instantiate component");
     let wasmtime = Wasmtime { universe, store };
 

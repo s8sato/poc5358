@@ -1,5 +1,5 @@
 mod bindings;
-mod command;
+mod instruction;
 mod state;
 mod types;
 
@@ -14,11 +14,13 @@ mod tests {
     use wasmtime::component;
 
     #[test]
-    fn command_flows() {
+    fn instruction_flows() {
         let engine = wasmtime::Engine::default();
-        let component =
-            component::Component::from_file(&engine, "../target/wasm32-wasip2/debug/command.wasm")
-                .expect("failed to load component");
+        let component = component::Component::from_file(
+            &engine,
+            "../target/wasm32-wasip2/debug/instruction.wasm",
+        )
+        .expect("failed to load component");
 
         let mut world = {
             let account_asset = [
@@ -46,7 +48,7 @@ mod tests {
             .into();
             state::World { account_asset }
         };
-        let supply_all = command::WasmCommand {
+        let supply_all = instruction::WasmInstruction {
             component,
             args: serde_json::json!({
                 "asset": "rose",
@@ -57,8 +59,8 @@ mod tests {
             .to_string(),
         };
 
-        println!("Initiating command");
-        command::initiate(supply_all, &engine)
+        println!("Initiating instruction");
+        instruction::initiate(supply_all, &engine)
             .read_request()
             .read_approval()
             .expect("read request rejected")
