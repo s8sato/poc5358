@@ -1,6 +1,8 @@
 use crate::bindings;
 use crate::prelude as host;
 
+use wasmtime_wasi::p2;
+
 pub enum CommandEnum {
     Builtin(BuiltinCommand),
     Wasm(WasmCommand),
@@ -19,28 +21,34 @@ pub type WasmComponent = wasmtime::component::Component;
 
 pub struct Wasmtime {
     universe: bindings::Universe,
-    store: wasmtime::Store<HostState>,
+    store: wasmtime::Store<CommandState>,
+}
+
+pub struct CommandState {
+    pub host: HostState,
+    pub wasi: p2::WasiCtx,
 }
 
 pub struct HostState {
     args: String,
 }
 
-impl bindings::poc::wit::general::Host for HostState {}
-impl bindings::poc::wit::read::Host for HostState {}
-impl bindings::poc::wit::view::Host for HostState {}
-impl bindings::poc::wit::write::Host for HostState {}
+impl bindings::poc::wit::general::Host for CommandState {}
+impl bindings::poc::wit::read::Host for CommandState {}
+impl bindings::poc::wit::view::Host for CommandState {}
+impl bindings::poc::wit::write::Host for CommandState {}
 
 // --- State transition ---
 
 pub fn initiate(command: WasmCommand, engine: &wasmtime::Engine) -> Init {
-    let host_state = HostState { args: command.args };
-    let mut linker = wasmtime::component::Linker::new(engine);
+    let host = HostState { args: command.args };
+    let wasi = p2::WasiCtxBuilder::new().build();
 
-    bindings::Universe::add_to_linker(&mut linker, |state: &mut HostState| state)
+    let mut linker = wasmtime::component::Linker::new(engine);
+    bindings::Universe::add_to_linker(&mut linker, |state: &mut CommandState| state)
         .expect("failed to add bindings to linker");
 
-    let mut store = wasmtime::Store::new(engine, host_state);
+    let mut store = wasmtime::Store::new(engine, CommandState { host, wasi });
     let universe = bindings::Universe::instantiate(&mut store, &command.component, &linker)
         .expect("failed to instantiate component");
     let wasmtime = Wasmtime { universe, store };
@@ -54,7 +62,7 @@ pub struct Init {
 
 impl Init {
     pub fn read_request(self) -> ToRead {
-        let args = self.wasmtime.store.data().args.clone();
+        let args = self.wasmtime.store.data().host.args.clone();
         let Init { mut wasmtime } = self;
         let request = wasmtime
             .universe
@@ -100,7 +108,7 @@ pub struct HasRead {
 
 impl HasRead {
     pub fn write_request(self) -> ToWrite {
-        let args = self.wasmtime.store.data().args.clone();
+        let args = self.wasmtime.store.data().host.args.clone();
         let HasRead {
             mut wasmtime,
             result,
