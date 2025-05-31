@@ -1,4 +1,4 @@
-use crate::conversion::*;
+use crate::bindings;
 use crate::prelude as host;
 
 pub enum CommandEnum {
@@ -18,7 +18,7 @@ pub struct WasmCommand {
 pub type WasmComponent = wasmtime::component::Component;
 
 pub struct Wasmtime {
-    instance: wasmtime::component::Instance,
+    universe: bindings::Universe,
     store: wasmtime::Store<HostState>,
 }
 
@@ -26,16 +26,24 @@ pub struct HostState {
     args: String,
 }
 
+impl bindings::poc::wit::general::Host for HostState {}
+impl bindings::poc::wit::read::Host for HostState {}
+impl bindings::poc::wit::view::Host for HostState {}
+impl bindings::poc::wit::write::Host for HostState {}
+
 // --- State transition ---
 
 pub fn initiate(command: WasmCommand, engine: &wasmtime::Engine) -> Init {
     let host_state = HostState { args: command.args };
+    let mut linker = wasmtime::component::Linker::new(engine);
+
+    bindings::Universe::add_to_linker(&mut linker, |state: &mut HostState| state)
+        .expect("failed to add bindings to linker");
+
     let mut store = wasmtime::Store::new(engine, host_state);
-    let linker = wasmtime::component::Linker::new(engine);
-    let instance = linker
-        .instantiate(&mut store, &command.component)
+    let universe = bindings::Universe::instantiate(&mut store, &command.component, &linker)
         .expect("failed to instantiate component");
-    let wasmtime = Wasmtime { instance, store };
+    let wasmtime = Wasmtime { universe, store };
 
     Init { wasmtime }
 }
@@ -48,11 +56,9 @@ impl Init {
     pub fn read_request(self) -> ToRead {
         let args = self.wasmtime.store.data().args.clone();
         let Init { mut wasmtime } = self;
-        let (request,) = wasmtime
-            .instance
-            .get_typed_func::<(String,), (ReadSet,)>(&mut wasmtime.store, "read_request")
-            .expect("failed to get read_request function")
-            .call(&mut wasmtime.store, (args,))
+        let request = wasmtime
+            .universe
+            .call_read_request(&mut wasmtime.store, &args)
             .expect("failed to call read_request function");
 
         ToRead { wasmtime, request }
@@ -61,7 +67,7 @@ impl Init {
 
 pub struct ToRead {
     wasmtime: Wasmtime,
-    request: ReadSet,
+    request: bindings::ReadSet,
 }
 
 impl ToRead {
@@ -74,7 +80,7 @@ impl ToRead {
 
 pub struct Reading {
     wasmtime: Wasmtime,
-    request: ReadSet,
+    request: bindings::ReadSet,
 }
 
 impl Reading {
@@ -89,7 +95,7 @@ impl Reading {
 
 pub struct HasRead {
     wasmtime: Wasmtime,
-    result: ViewSet,
+    result: bindings::ViewSet,
 }
 
 impl HasRead {
@@ -99,11 +105,9 @@ impl HasRead {
             mut wasmtime,
             result,
         } = self;
-        let (request,) = wasmtime
-            .instance
-            .get_typed_func::<(String, ViewSet), (WriteSet,)>(&mut wasmtime.store, "write_request")
-            .expect("failed to get write_request function")
-            .call(&mut wasmtime.store, (args, result))
+        let request = wasmtime
+            .universe
+            .call_write_request(&mut wasmtime.store, &result, &args)
             .expect("failed to call write_request function");
 
         ToWrite { request }
@@ -111,7 +115,7 @@ impl HasRead {
 }
 
 pub struct ToWrite {
-    request: WriteSet,
+    request: bindings::WriteSet,
 }
 
 impl ToWrite {
@@ -123,7 +127,7 @@ impl ToWrite {
 }
 
 pub struct Writing {
-    request: WriteSet,
+    request: bindings::WriteSet,
 }
 
 impl Writing {
@@ -138,7 +142,7 @@ impl Writing {
 }
 
 pub struct HasWritten {
-    result: WriteSet,
+    result: bindings::WriteSet,
 }
 
 // pub struct ToPay;

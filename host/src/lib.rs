@@ -1,5 +1,5 @@
+mod bindings;
 mod command;
-mod conversion;
 mod state;
 mod types;
 

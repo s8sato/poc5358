@@ -1,5 +1,0 @@
-world host {
-    include common;
-    include command;
-    include authorizer;
-}
