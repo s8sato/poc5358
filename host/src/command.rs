@@ -2,6 +2,7 @@ use crate::bindings;
 use crate::prelude as host;
 
 use wasmtime_wasi::p2;
+use wasmtime_wasi::p2::bindings::cli::exit::LinkOptions;
 
 pub enum CommandEnum {
     Builtin(BuiltinCommand),
@@ -33,10 +34,80 @@ pub struct HostState {
     args: String,
 }
 
+impl p2::IoView for CommandState {
+    fn table(&mut self) -> &mut wasmtime_wasi::ResourceTable {
+        unimplemented!()
+    }
+}
+impl p2::WasiView for CommandState {
+    fn ctx(&mut self) -> &mut p2::WasiCtx {
+        &mut self.wasi
+    }
+}
+
 impl bindings::poc::wit::general::Host for CommandState {}
 impl bindings::poc::wit::read::Host for CommandState {}
 impl bindings::poc::wit::view::Host for CommandState {}
 impl bindings::poc::wit::write::Host for CommandState {}
+impl p2::bindings::cli::environment::Host for CommandState {
+    fn get_environment(
+        &mut self,
+    ) -> wasmtime::Result<
+        wasmtime::component::__internal::Vec<(
+            wasmtime::component::__internal::String,
+            wasmtime::component::__internal::String,
+        )>,
+    > {
+        unimplemented!()
+    }
+    fn get_arguments(
+        &mut self,
+    ) -> wasmtime::Result<
+        wasmtime::component::__internal::Vec<wasmtime::component::__internal::String>,
+    > {
+        unimplemented!()
+    }
+    fn initial_cwd(&mut self) -> wasmtime::Result<Option<wasmtime::component::__internal::String>> {
+        unimplemented!()
+    }
+}
+impl p2::bindings::cli::exit::Host for CommandState {
+    fn exit(&mut self, status: Result<(), ()>) -> wasmtime::Result<()> {
+        unimplemented!()
+    }
+    fn exit_with_code(&mut self, status_code: u8) -> wasmtime::Result<()> {
+        unimplemented!()
+    }
+}
+impl p2::bindings::io::error::Host for CommandState {}
+impl p2::bindings::io::error::HostError for CommandState {
+    fn to_debug_string(
+        &mut self,
+        self_: wasmtime::component::Resource<p2::IoError>,
+    ) -> wasmtime::Result<wasmtime::component::__internal::String> {
+        unimplemented!()
+    }
+    fn drop(&mut self, rep: wasmtime::component::Resource<p2::IoError>) -> wasmtime::Result<()> {
+        unimplemented!()
+    }
+}
+impl p2::bindings::io::streams::Host for CommandState {
+    fn convert_stream_error(
+        &mut self,
+        err: super::super::super::_TrappableError0,
+    ) -> wasmtime::Result<p2::bindings::io::streams::StreamError> {
+        unimplemented!()
+    }
+}
+impl p2::bindings::io::streams::HostOutputStream for CommandState {
+    fn check_write(
+        &mut self,
+        self_: wasmtime::component::Resource<p2::DynOutputStream>,
+    ) -> Result<u64, super::super::super::_TrappableError0> {
+        unimplemented!()
+    }
+    // heart break...
+}
 
 // --- State transition ---
 
@@ -45,6 +116,16 @@ pub fn initiate(command: WasmCommand, engine: &wasmtime::Engine) -> Init {
     let wasi = p2::WasiCtxBuilder::new().build();
 
     let mut linker = wasmtime::component::Linker::new(engine);
+    p2::bindings::cli::environment::add_to_linker(&mut linker, |state: &mut CommandState| state)
+        .expect("failed to add WASI environment to linker");
+    p2::bindings::cli::exit::add_to_linker(
+        &mut linker,
+        &LinkOptions::default(),
+        |state: &mut CommandState| state,
+    )
+    .expect("failed to add WASI exit to linker");
+    p2::bindings::io::error::add_to_linker(&mut linker, |state: &mut CommandState| state)
+        .expect("failed to add WASI error to linker");
     bindings::Universe::add_to_linker(&mut linker, |state: &mut CommandState| state)
         .expect("failed to add bindings to linker");
 
