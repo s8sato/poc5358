@@ -20,7 +20,7 @@ mod tests {
             &engine,
             "../target/wasm32-wasip2/debug/instruction.wasm",
         )
-        .expect("failed to load component");
+        .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
 
         let mut world = {
             let account_asset = [
@@ -63,14 +63,14 @@ mod tests {
         instruction::initiate(supply_all, &engine)
             .read_request()
             .read_approval()
-            .expect("read request rejected")
+            .expect("read request should be approved")
             .read(&world)
-            .expect("failed to read")
+            .expect("should read")
             .write_request()
             .write_approval()
-            .expect("write request rejected")
+            .expect("write request should be approved")
             .write(&mut world)
-            .expect("failed to write");
+            .expect("should write");
 
         let expected = [
             (
