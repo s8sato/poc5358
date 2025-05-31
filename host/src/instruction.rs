@@ -26,6 +26,7 @@ pub struct Wasmtime {
     store: wasmtime::Store<InstructionState>,
 }
 
+/// Data relevant only during Wasm execution.
 pub struct InstructionState {
     pub host: HostState,
     pub wasi: p2::WasiCtx,
@@ -51,7 +52,11 @@ impl bindings::poc::wit::types::Host for InstructionState {}
 
 // --- State transition ---
 
-pub fn initiate(instruction: WasmInstruction, engine: &wasmtime::Engine) -> Init {
+pub fn initiate(
+    instruction: WasmInstruction,
+    engine: &wasmtime::Engine,
+    authority: host::AccountK,
+) -> Init {
     let host = HostState {
         args: instruction.args,
     };
@@ -73,56 +78,86 @@ pub fn initiate(instruction: WasmInstruction, engine: &wasmtime::Engine) -> Init
         .expect("failed to instantiate component");
     let wasmtime = Wasmtime { universe, store };
 
-    Init { wasmtime }
+    Init {
+        authority,
+        wasmtime,
+    }
 }
 
 pub struct Init {
+    authority: host::AccountK,
     wasmtime: Wasmtime,
 }
 
 impl Init {
     pub fn read_request(self) -> ToRead {
         let args = self.wasmtime.store.data().host.args.clone();
-        let Init { mut wasmtime } = self;
+        let Init {
+            authority,
+            mut wasmtime,
+        } = self;
         let request = wasmtime
             .universe
             .call_read_request(&mut wasmtime.store, &args)
             .expect("failed to call read_request function");
 
-        ToRead { wasmtime, request }
+        ToRead {
+            authority,
+            wasmtime,
+            request,
+        }
     }
 }
 
 pub struct ToRead {
+    authority: host::AccountK,
     wasmtime: Wasmtime,
     request: bindings::ReadSet,
 }
 
 impl ToRead {
     pub fn read_approval(self) -> Result<Reading, ()> {
-        let ToRead { wasmtime, request } = self;
+        let ToRead {
+            authority,
+            wasmtime,
+            request,
+        } = self;
         // TODO: seek approval from the authorizer
-        Ok(Reading { wasmtime, request })
+        Ok(Reading {
+            authority,
+            wasmtime,
+            request,
+        })
     }
 }
 
 pub struct Reading {
+    authority: host::AccountK,
     wasmtime: Wasmtime,
     request: bindings::ReadSet,
 }
 
 impl Reading {
     pub fn read(self, state: &impl crate::state::WorldState) -> Result<HasRead, ()> {
-        let Reading { wasmtime, request } = self;
+        let Reading {
+            authority,
+            wasmtime,
+            request,
+        } = self;
         let request = host::ReadSet::from(request);
         println!("Reading request: {:#?}", &request);
         let result = state.read(&request).into();
 
-        Ok(HasRead { wasmtime, result })
+        Ok(HasRead {
+            authority,
+            wasmtime,
+            result,
+        })
     }
 }
 
 pub struct HasRead {
+    authority: host::AccountK,
     wasmtime: Wasmtime,
     result: bindings::ViewSet,
 }
@@ -131,6 +166,7 @@ impl HasRead {
     pub fn write_request(self) -> ToWrite {
         let args = self.wasmtime.store.data().host.args.clone();
         let HasRead {
+            authority,
             mut wasmtime,
             result,
         } = self;
@@ -139,33 +175,35 @@ impl HasRead {
             .call_write_request(&mut wasmtime.store, &result, &args)
             .expect("failed to call write_request function");
 
-        ToWrite { request }
+        ToWrite { authority, request }
     }
 }
 
 pub struct ToWrite {
+    authority: host::AccountK,
     request: bindings::WriteSet,
 }
 
 impl ToWrite {
     pub fn write_approval(self) -> Result<Writing, ()> {
-        let ToWrite { request } = self;
+        let ToWrite { authority, request } = self;
         // TODO: seek approval from the authorizer
-        Ok(Writing { request })
+        Ok(Writing { authority, request })
     }
 }
 
 pub struct Writing {
+    authority: host::AccountK,
     request: bindings::WriteSet,
 }
 
 impl Writing {
     pub fn write(self, state: &mut impl crate::state::WorldState) -> Result<HasWritten, ()> {
-        let Writing { request } = self;
+        let Writing { authority, request } = self;
         let request = host::WriteSet::from(request);
         println!("Writing request: {:#?}", &request);
-        state.write(&request);
-        let result = request.into();
+        state.write(&request, authority.clone());
+        let result = (request, authority).into();
 
         Ok(HasWritten { result })
     }

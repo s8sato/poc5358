@@ -4,13 +4,13 @@ mod state;
 mod types;
 
 mod prelude {
-    pub use super::types::{general::*, read::*, view::*, write::*};
+    pub use super::types::{allow::*, event::*, general::*, read::*, view::*, write::*};
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use types::{general::CompositeKey, view::AccountAssetV};
+    use types::{general::CompositeKey, general::SingleKey, view::AccountAssetV};
     use wasmtime::component;
 
     #[test]
@@ -60,7 +60,8 @@ mod tests {
         };
 
         println!("Initiating instruction");
-        instruction::initiate(supply_all, &engine)
+        let authority = SingleKey("alice".into());
+        instruction::initiate(supply_all, &engine, authority)
             .read_request()
             .read_approval()
             .expect("read request should be approved")

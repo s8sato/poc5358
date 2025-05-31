@@ -1,3 +1,5 @@
+#![expect(dead_code)]
+
 pub mod general {
     use std::collections::BTreeMap;
 
@@ -9,21 +11,48 @@ pub mod general {
     pub struct Tree<T: Mode>(pub BTreeMap<NodeKey, NodeValue<T>>);
 
     #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct FlexTree<T: Mode>(pub BTreeMap<FlexNodeKey, NodeValue<T>>);
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct FuzzyTree<T: Mode>(pub BTreeMap<FuzzyNodeKey, NodeValue<T>>);
 
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct FlexFuzzyTree<T: Mode>(pub BTreeMap<FlexFuzzyNodeKey, NodeValue<T>>);
+
     pub type KeyElem = String;
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    pub enum FlexKeyElem {
+        /// Generic pointer to the current account; resolved to an absolute KeyElem
+        This,
+        /// Explicit absolute KeyElem
+        That(KeyElem),
+    }
 
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     pub struct SingleKey(pub KeyElem);
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct FlexSingleKey(pub FlexKeyElem);
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     pub struct CompositeKey(pub KeyElem, pub KeyElem);
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct FlexCompositeKey(pub FlexKeyElem, pub KeyElem);
+
+    pub type AccountK = SingleKey;
     pub type AccountAssetK = CompositeKey;
+    pub type FlexAccountAssetK = FlexCompositeKey;
 
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     pub struct FuzzySingleKey(pub Option<KeyElem>);
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct FlexFuzzySingleKey(pub Option<FlexKeyElem>);
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     pub struct FuzzyCompositeKey(pub Option<KeyElem>, pub Option<KeyElem>);
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    pub struct FlexFuzzyCompositeKey(pub Option<FlexKeyElem>, pub Option<KeyElem>);
+
+    pub type FuzzyAccountK = FuzzySingleKey;
     pub type FuzzyAccountAssetK = FuzzyCompositeKey;
+    pub type FlexFuzzyAccountAssetK = FlexFuzzyCompositeKey;
 
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     pub enum NodeKey {
@@ -31,8 +60,18 @@ pub mod general {
     }
 
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    pub enum FlexNodeKey {
+        AccountAsset(FlexAccountAssetK),
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
     pub enum FuzzyNodeKey {
         AccountAsset(FuzzyAccountAssetK),
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+    pub enum FlexFuzzyNodeKey {
+        AccountAsset(FlexFuzzyAccountAssetK),
     }
 
     #[derive(Debug, Clone, PartialEq, Eq)]
@@ -59,6 +98,107 @@ pub mod general {
             let FuzzyCompositeKey(cap0, cap1) = self;
             cap0.as_ref().is_none_or(|cap0| candidate.0 == *cap0)
                 && cap1.as_ref().is_none_or(|cap1| candidate.1 == *cap1)
+        }
+    }
+
+    /// Resolves FlexKeyElem::This to absolute KeyElem.
+    pub trait Resolve {
+        type Resolved;
+        fn resolve(self, this: KeyElem) -> Self::Resolved;
+    }
+
+    /// Un-resolves absolute KeyElem to FlexKeyElem::That.
+    pub trait UnResolve {
+        type UnResolved;
+        fn unresolve(self) -> Self::UnResolved;
+    }
+
+    impl Resolve for FlexKeyElem {
+        type Resolved = KeyElem;
+        fn resolve(self, this: KeyElem) -> Self::Resolved {
+            match self {
+                FlexKeyElem::This => this,
+                FlexKeyElem::That(that) => that,
+            }
+        }
+    }
+
+    impl UnResolve for KeyElem {
+        type UnResolved = FlexKeyElem;
+        fn unresolve(self) -> Self::UnResolved {
+            FlexKeyElem::That(self)
+        }
+    }
+
+    impl Resolve for FlexSingleKey {
+        type Resolved = SingleKey;
+        fn resolve(self, this: KeyElem) -> Self::Resolved {
+            SingleKey(self.0.resolve(this))
+        }
+    }
+
+    impl Resolve for FlexFuzzySingleKey {
+        type Resolved = FuzzySingleKey;
+        fn resolve(self, this: KeyElem) -> Self::Resolved {
+            FuzzySingleKey(self.0.map(|elem| elem.resolve(this)))
+        }
+    }
+
+    impl Resolve for FlexCompositeKey {
+        type Resolved = CompositeKey;
+        fn resolve(self, this: KeyElem) -> Self::Resolved {
+            CompositeKey(self.0.resolve(this), self.1)
+        }
+    }
+
+    impl Resolve for FlexFuzzyCompositeKey {
+        type Resolved = FuzzyCompositeKey;
+        fn resolve(self, this: KeyElem) -> Self::Resolved {
+            FuzzyCompositeKey(self.0.map(|elem| elem.resolve(this)), self.1)
+        }
+    }
+
+    impl Resolve for FlexNodeKey {
+        type Resolved = NodeKey;
+        fn resolve(self, this: KeyElem) -> Self::Resolved {
+            match self {
+                FlexNodeKey::AccountAsset(key) => NodeKey::AccountAsset(key.resolve(this)),
+            }
+        }
+    }
+
+    impl Resolve for FlexFuzzyNodeKey {
+        type Resolved = FuzzyNodeKey;
+        fn resolve(self, this: KeyElem) -> Self::Resolved {
+            match self {
+                FlexFuzzyNodeKey::AccountAsset(key) => {
+                    FuzzyNodeKey::AccountAsset(key.resolve(this))
+                }
+            }
+        }
+    }
+
+    impl<T: Mode> Resolve for FlexTree<T> {
+        type Resolved = Tree<T>;
+        fn resolve(self, this: KeyElem) -> Self::Resolved {
+            Tree(
+                self.0
+                    .into_iter()
+                    .map(|(k, v)| (k.resolve(this.clone()), v))
+                    .collect(),
+            )
+        }
+    }
+
+    impl<T: Mode> Resolve for FlexFuzzyTree<T> {
+        type Resolved = FuzzyTree<T>;
+        fn resolve(self, this: KeyElem) -> Self::Resolved {
+            FuzzyTree(
+                self.0
+                    .into_iter()
+                    .map(|(k, v)| (k.resolve(this.clone()), v))
+                    .collect(),
+            )
         }
     }
 }
@@ -107,7 +247,7 @@ pub mod write {
         type AccountAsset = AccountAssetW;
     }
 
-    pub type WriteSet = Tree<Write>;
+    pub type WriteSet = FlexTree<Write>;
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub enum AccountAssetW {
@@ -116,10 +256,52 @@ pub mod write {
     }
 }
 
+pub mod event {
+    use super::general::*;
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct Event;
+
+    impl Mode for Event {
+        type AccountAsset = AccountAssetE;
+    }
+
+    pub type EventSet = Tree<Event>;
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    #[repr(u8)]
+    pub enum AccountAssetE {
+        Read = 0b0000_0001,
+        Receive = 0b0000_0010,
+        Send = 0b0000_0100,
+        Mint = 0b0001_0000,
+        Burn = 0b0010_0000,
+    }
+}
+
+pub mod allow {
+    use super::general::*;
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct Allow;
+
+    impl Mode for Allow {
+        type AccountAsset = AccountAssetA;
+    }
+
+    pub type AllowSet = FlexFuzzyTree<Allow>;
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct AccountAssetA {
+        pub bit_mask: u8,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::types::general::Capture;
+    use crate::types::general::Resolve;
 
     #[test]
     fn fuzzy_key_captures() {
@@ -154,5 +336,20 @@ mod tests {
         let fuzzy_key = general::FuzzyCompositeKey(None, Some("test2".into()));
         let candidate = general::CompositeKey("test1".into(), "test3".into());
         assert!(!fuzzy_key.captures(&candidate));
+    }
+
+    #[test]
+    fn flex_key_resolves() {
+        let flex_key = general::FlexSingleKey(general::FlexKeyElem::This);
+        let resolved_key = flex_key.resolve("current_authority".into());
+        assert_eq!(resolved_key, general::SingleKey("current_authority".into()));
+
+        let flex_key =
+            general::FlexCompositeKey(general::FlexKeyElem::That("alice".into()), "rose".into());
+        let resolved_key = flex_key.resolve("current_authority".into());
+        assert_eq!(
+            resolved_key,
+            general::CompositeKey("alice".into(), "rose".into())
+        );
     }
 }

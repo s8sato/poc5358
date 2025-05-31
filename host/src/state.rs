@@ -4,7 +4,7 @@ use crate::prelude::*;
 
 pub trait WorldState {
     fn read(&self, request: &ReadSet) -> ViewSet;
-    fn write(&mut self, request: &WriteSet);
+    fn write(&mut self, request: &WriteSet, authority: AccountK);
 }
 
 pub struct World {
@@ -48,12 +48,12 @@ impl WorldState for World {
         Tree(map)
     }
 
-    fn write(&mut self, request: &WriteSet) {
+    fn write(&mut self, request: &WriteSet, authority: AccountK) {
         request.0.iter().for_each(
-            |(NodeKey::AccountAsset(k), NodeValue::AccountAsset(v))| match v {
+            |(FlexNodeKey::AccountAsset(k), NodeValue::AccountAsset(v))| match v {
                 AccountAssetW::Receive(amount) => {
                     self.account_asset
-                        .entry(k.clone())
+                        .entry(k.clone().resolve(authority.0.clone()))
                         .and_modify(|existing| {
                             let AccountAssetV { balance } = existing;
                             println!("Adding amount: {k:?}");
@@ -65,7 +65,7 @@ impl WorldState for World {
                 }
                 AccountAssetW::Send(amount) => {
                     self.account_asset
-                        .entry(k.clone())
+                        .entry(k.clone().resolve(authority.0.clone()))
                         .and_modify(|existing| {
                             let AccountAssetV { balance } = existing;
                             println!("Subtracting amount: {k:?}");
