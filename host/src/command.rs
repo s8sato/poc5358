@@ -28,6 +28,7 @@ pub struct Wasmtime {
 pub struct CommandState {
     pub host: HostState,
     pub wasi: p2::WasiCtx,
+    pub resource_table: wasmtime_wasi::ResourceTable,
 }
 
 pub struct HostState {
@@ -36,7 +37,7 @@ pub struct HostState {
 
 impl p2::IoView for CommandState {
     fn table(&mut self) -> &mut wasmtime_wasi::ResourceTable {
-        unimplemented!()
+        &mut self.resource_table
     }
 }
 impl p2::WasiView for CommandState {
@@ -91,45 +92,43 @@ impl p2::bindings::io::error::HostError for CommandState {
         unimplemented!()
     }
 }
-impl p2::bindings::io::streams::Host for CommandState {
-    fn convert_stream_error(
-        &mut self,
-        err: super::super::super::_TrappableError0,
-    ) -> wasmtime::Result<p2::bindings::io::streams::StreamError> {
-        unimplemented!()
-    }
-}
-impl p2::bindings::io::streams::HostOutputStream for CommandState {
-    fn check_write(
-        &mut self,
-        self_: wasmtime::component::Resource<p2::DynOutputStream>,
-    ) -> Result<u64, super::super::super::_TrappableError0> {
-        unimplemented!()
-    }
-    // heart break...
-}
 
 // --- State transition ---
 
 pub fn initiate(command: WasmCommand, engine: &wasmtime::Engine) -> Init {
     let host = HostState { args: command.args };
-    let wasi = p2::WasiCtxBuilder::new().build();
+    let resource_table = wasmtime_wasi::ResourceTable::new();
+    let mut store = wasmtime::Store::new(
+        engine,
+        CommandState {
+            host,
+            wasi: p2::WasiCtxBuilder::new().build(),
+            resource_table,
+        },
+    );
 
     let mut linker = wasmtime::component::Linker::new(engine);
-    p2::bindings::cli::environment::add_to_linker(&mut linker, |state: &mut CommandState| state)
-        .expect("failed to add WASI environment to linker");
-    p2::bindings::cli::exit::add_to_linker(
-        &mut linker,
-        &LinkOptions::default(),
-        |state: &mut CommandState| state,
-    )
-    .expect("failed to add WASI exit to linker");
-    p2::bindings::io::error::add_to_linker(&mut linker, |state: &mut CommandState| state)
-        .expect("failed to add WASI error to linker");
-    bindings::Universe::add_to_linker(&mut linker, |state: &mut CommandState| state)
-        .expect("failed to add bindings to linker");
+    // p2::bindings::cli::environment::add_to_linker(&mut linker, |state: &mut CommandState| state)
+    //     .expect("failed to add WASI environment to linker");
+    // p2::bindings::cli::exit::add_to_linker(
+    //     &mut linker,
+    //     &LinkOptions::default(),
+    //     |state: &mut CommandState| state,
+    // )
+    // .expect("failed to add WASI exit to linker");
+    // p2::bindings::io::error::add_to_linker(&mut linker, |state: &mut CommandState| state)
+    //     .expect("failed to add WASI error to linker");
+    p2::add_to_linker_sync(&mut linker).expect("failed to add WASI bindings to linker");
+    bindings::poc::wit::general::add_to_linker(&mut linker, |state: &mut CommandState| state)
+        .expect("failed to add general bindings to linker");
+    bindings::poc::wit::read::add_to_linker(&mut linker, |state: &mut CommandState| state)
+        .expect("failed to add general bindings to linker");
+    bindings::poc::wit::view::add_to_linker(&mut linker, |state: &mut CommandState| state)
+        .expect("failed to add general bindings to linker");
+    bindings::poc::wit::write::add_to_linker(&mut linker, |state: &mut CommandState| state)
+        .expect("failed to add general bindings to linker");
+    // bindings::Universe::add_to_linker(&mut linker, |state: &mut CommandState| state).expect("failed to add bindings to linker");
 
-    let mut store = wasmtime::Store::new(engine, CommandState { host, wasi });
     let universe = bindings::Universe::instantiate(&mut store, &command.component, &linker)
         .expect("failed to instantiate component");
     let wasmtime = Wasmtime { universe, store };
