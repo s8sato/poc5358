@@ -14,7 +14,7 @@ mod tests {
     use wasmtime::component;
 
     #[test]
-    fn it_works() {
+    fn command_flows() {
         let engine = wasmtime::Engine::default();
         let component =
             component::Component::from_file(&engine, "../target/wasm32-wasip2/debug/command.wasm")
@@ -28,19 +28,19 @@ mod tests {
                 ),
                 (
                     CompositeKey("bob".into(), "rose".into()),
-                    AccountAssetV { balance: 110 },
+                    AccountAssetV { balance: 100 },
                 ),
                 (
                     CompositeKey("carol".into(), "rose".into()),
-                    AccountAssetV { balance: 100 },
+                    AccountAssetV { balance: 90 },
                 ),
                 (
                     CompositeKey("dave".into(), "rose".into()),
                     AccountAssetV { balance: 90 },
                 ),
                 (
-                    CompositeKey("eve".into(), "rose".into()),
-                    AccountAssetV { balance: 80 },
+                    CompositeKey("eve".into(), "tulip".into()),
+                    AccountAssetV { balance: 90 },
                 ),
             ]
             .into();
@@ -57,6 +57,7 @@ mod tests {
             .to_string(),
         };
 
+        println!("Initiating command");
         command::initiate(supply_all, &engine)
             .read_request()
             .read_approval()
@@ -76,19 +77,19 @@ mod tests {
             ),
             (
                 CompositeKey("bob".into(), "rose".into()),
-                AccountAssetV { balance: 110 },
+                AccountAssetV { balance: 100 },
             ),
             (
                 CompositeKey("carol".into(), "rose".into()),
-                AccountAssetV { balance: 100 },
+                AccountAssetV { balance: 140 },
             ),
             (
                 CompositeKey("dave".into(), "rose".into()),
                 AccountAssetV { balance: 140 },
             ),
             (
-                CompositeKey("eve".into(), "rose".into()),
-                AccountAssetV { balance: 130 },
+                CompositeKey("eve".into(), "tulip".into()),
+                AccountAssetV { balance: 90 },
             ),
         ];
 

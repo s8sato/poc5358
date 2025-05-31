@@ -58,7 +58,7 @@ pub mod general {
         fn captures(&self, candidate: &Self::Captured) -> bool {
             let FuzzyCompositeKey(cap0, cap1) = self;
             cap0.as_ref().is_none_or(|cap0| candidate.0 == *cap0)
-                && cap1.as_ref().is_none_or(|cap1| candidate.0 == *cap1)
+                && cap1.as_ref().is_none_or(|cap1| candidate.1 == *cap1)
         }
     }
 }
@@ -113,5 +113,46 @@ pub mod write {
     pub enum AccountAssetW {
         Send(u32),
         Receive(u32),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::types::general::Capture;
+
+    #[test]
+    fn fuzzy_key_captures() {
+        let fuzzy_key = general::FuzzySingleKey(None);
+        let candidate = general::SingleKey("test".into());
+        assert!(fuzzy_key.captures(&candidate));
+
+        let fuzzy_key = general::FuzzySingleKey(Some("test".into()));
+        let candidate = general::SingleKey("test".into());
+        assert!(fuzzy_key.captures(&candidate));
+
+        let fuzzy_key = general::FuzzyCompositeKey(None, None);
+        let candidate = general::CompositeKey("test1".into(), "test2".into());
+        assert!(fuzzy_key.captures(&candidate));
+
+        let fuzzy_key = general::FuzzyCompositeKey(None, Some("test2".into()));
+        let candidate = general::CompositeKey("test1".into(), "test2".into());
+        assert!(fuzzy_key.captures(&candidate));
+
+        let fuzzy_key = general::FuzzyCompositeKey(Some("test1".into()), None);
+        let candidate = general::CompositeKey("test1".into(), "test2".into());
+        assert!(fuzzy_key.captures(&candidate));
+
+        let fuzzy_key = general::FuzzyCompositeKey(Some("test1".into()), Some("test2".into()));
+        let candidate = general::CompositeKey("test1".into(), "test2".into());
+        assert!(fuzzy_key.captures(&candidate));
+
+        let fuzzy_key = general::FuzzyCompositeKey(Some("test1".into()), Some("test2".into()));
+        let candidate = general::CompositeKey("test0".into(), "test2".into());
+        assert!(!fuzzy_key.captures(&candidate));
+
+        let fuzzy_key = general::FuzzyCompositeKey(None, Some("test2".into()));
+        let candidate = general::CompositeKey("test1".into(), "test3".into());
+        assert!(!fuzzy_key.captures(&candidate));
     }
 }

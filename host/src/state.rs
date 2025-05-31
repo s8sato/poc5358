@@ -3,7 +3,6 @@ use std::collections::BTreeMap;
 use crate::prelude::*;
 
 pub trait WorldState {
-    fn new() -> Self;
     fn read(&self, request: &ReadSet) -> ViewSet;
     fn write(&mut self, request: &WriteSet);
 }
@@ -13,23 +12,26 @@ pub struct World {
 }
 
 impl WorldState for World {
-    fn new() -> Self {
-        Self {
-            account_asset: BTreeMap::new(),
-        }
-    }
-
     fn read(&self, request: &ReadSet) -> ViewSet {
         let keys: Vec<&AccountAssetK> = self
             .account_asset
             .keys()
             .filter(|key| {
+                println!("Checking key: {key:?}");
                 request
                     .0
                     .keys()
-                    .any(|FuzzyNodeKey::AccountAsset(capture)| capture.captures(key))
+                    .inspect(|fuzzy_key| {
+                        println!("Against fuzzy key: {fuzzy_key:?}");
+                    })
+                    .any(|FuzzyNodeKey::AccountAsset(capture)| {
+                        let captured = capture.captures(key);
+                        println!("Captured: {captured}");
+                        captured
+                    })
             })
             .collect();
+        println!("Keys to read: {:#?}", &keys);
         let map = self
             .account_asset
             .iter()
@@ -41,6 +43,7 @@ impl WorldState for World {
                 )
             })
             .collect();
+        println!("Read map: {:#?}", &map);
 
         Tree(map)
     }
@@ -53,7 +56,10 @@ impl WorldState for World {
                         .entry(k.clone())
                         .and_modify(|existing| {
                             let AccountAssetV { balance } = existing;
+                            println!("Adding amount: {k:?}");
+                            println!("Current balance: {}", &balance);
                             *balance = balance.saturating_add(*amount);
+                            println!("New balance: {balance}");
                         })
                         .or_insert_with(|| AccountAssetV { balance: *amount });
                 }
@@ -62,9 +68,12 @@ impl WorldState for World {
                         .entry(k.clone())
                         .and_modify(|existing| {
                             let AccountAssetV { balance } = existing;
+                            println!("Subtracting amount: {k:?}");
+                            println!("Current balance: {}", &balance);
                             *balance = balance.checked_sub(*amount).unwrap_or_else(|| {
                                 panic!("Cannot send more than the balance");
                             });
+                            println!("New balance: {balance}");
                         })
                         .or_insert_with(|| {
                             panic!("Cannot send from no balance");

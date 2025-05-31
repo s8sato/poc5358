@@ -1,8 +1,9 @@
+#![expect(dead_code)]
+
 use crate::bindings;
 use crate::prelude as host;
 
 use wasmtime_wasi::p2;
-use wasmtime_wasi::p2::bindings::cli::exit::LinkOptions;
 
 pub enum CommandEnum {
     Builtin(BuiltinCommand),
@@ -46,88 +47,25 @@ impl p2::WasiView for CommandState {
     }
 }
 
-impl bindings::poc::wit::general::Host for CommandState {}
-impl bindings::poc::wit::read::Host for CommandState {}
-impl bindings::poc::wit::view::Host for CommandState {}
-impl bindings::poc::wit::write::Host for CommandState {}
-impl p2::bindings::cli::environment::Host for CommandState {
-    fn get_environment(
-        &mut self,
-    ) -> wasmtime::Result<
-        wasmtime::component::__internal::Vec<(
-            wasmtime::component::__internal::String,
-            wasmtime::component::__internal::String,
-        )>,
-    > {
-        unimplemented!()
-    }
-    fn get_arguments(
-        &mut self,
-    ) -> wasmtime::Result<
-        wasmtime::component::__internal::Vec<wasmtime::component::__internal::String>,
-    > {
-        unimplemented!()
-    }
-    fn initial_cwd(&mut self) -> wasmtime::Result<Option<wasmtime::component::__internal::String>> {
-        unimplemented!()
-    }
-}
-impl p2::bindings::cli::exit::Host for CommandState {
-    fn exit(&mut self, status: Result<(), ()>) -> wasmtime::Result<()> {
-        unimplemented!()
-    }
-    fn exit_with_code(&mut self, status_code: u8) -> wasmtime::Result<()> {
-        unimplemented!()
-    }
-}
-impl p2::bindings::io::error::Host for CommandState {}
-impl p2::bindings::io::error::HostError for CommandState {
-    fn to_debug_string(
-        &mut self,
-        self_: wasmtime::component::Resource<p2::IoError>,
-    ) -> wasmtime::Result<wasmtime::component::__internal::String> {
-        unimplemented!()
-    }
-    fn drop(&mut self, rep: wasmtime::component::Resource<p2::IoError>) -> wasmtime::Result<()> {
-        unimplemented!()
-    }
-}
+impl bindings::poc::wit::types::Host for CommandState {}
 
 // --- State transition ---
 
 pub fn initiate(command: WasmCommand, engine: &wasmtime::Engine) -> Init {
     let host = HostState { args: command.args };
-    let resource_table = wasmtime_wasi::ResourceTable::new();
     let mut store = wasmtime::Store::new(
         engine,
         CommandState {
             host,
             wasi: p2::WasiCtxBuilder::new().build(),
-            resource_table,
+            resource_table: wasmtime_wasi::ResourceTable::new(),
         },
     );
 
     let mut linker = wasmtime::component::Linker::new(engine);
-    // p2::bindings::cli::environment::add_to_linker(&mut linker, |state: &mut CommandState| state)
-    //     .expect("failed to add WASI environment to linker");
-    // p2::bindings::cli::exit::add_to_linker(
-    //     &mut linker,
-    //     &LinkOptions::default(),
-    //     |state: &mut CommandState| state,
-    // )
-    // .expect("failed to add WASI exit to linker");
-    // p2::bindings::io::error::add_to_linker(&mut linker, |state: &mut CommandState| state)
-    //     .expect("failed to add WASI error to linker");
     p2::add_to_linker_sync(&mut linker).expect("failed to add WASI bindings to linker");
-    bindings::poc::wit::general::add_to_linker(&mut linker, |state: &mut CommandState| state)
-        .expect("failed to add general bindings to linker");
-    bindings::poc::wit::read::add_to_linker(&mut linker, |state: &mut CommandState| state)
-        .expect("failed to add general bindings to linker");
-    bindings::poc::wit::view::add_to_linker(&mut linker, |state: &mut CommandState| state)
-        .expect("failed to add general bindings to linker");
-    bindings::poc::wit::write::add_to_linker(&mut linker, |state: &mut CommandState| state)
-        .expect("failed to add general bindings to linker");
-    // bindings::Universe::add_to_linker(&mut linker, |state: &mut CommandState| state).expect("failed to add bindings to linker");
+    bindings::Universe::add_to_linker(&mut linker, |state: &mut CommandState| state)
+        .expect("failed to add bindings to linker");
 
     let universe = bindings::Universe::instantiate(&mut store, &command.component, &linker)
         .expect("failed to instantiate component");
@@ -175,6 +113,7 @@ impl Reading {
     pub fn read(self, state: &impl crate::state::WorldState) -> Result<HasRead, ()> {
         let Reading { wasmtime, request } = self;
         let request = host::ReadSet::from(request);
+        println!("Reading request: {:#?}", &request);
         let result = state.read(&request).into();
 
         Ok(HasRead { wasmtime, result })
@@ -222,6 +161,7 @@ impl Writing {
     pub fn write(self, state: &mut impl crate::state::WorldState) -> Result<HasWritten, ()> {
         let Writing { request } = self;
         let request = host::WriteSet::from(request);
+        println!("Writing request: {:#?}", &request);
         state.write(&request);
         let result = request.into();
 

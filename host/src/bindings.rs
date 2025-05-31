@@ -1,10 +1,10 @@
 use crate::prelude as host;
-use poc::wit::{general, read::*, view::*, write::*};
+use poc::wit::types::*;
 
 wasmtime::component::bindgen!({
     world: "universe",
     path: "../wit",
-    // additional_derives: [Debug, Clone, PartialEq, Eq],
+    additional_derives: [Clone, PartialEq, Eq, PartialOrd, Ord],
 });
 
 impl From<ReadSet> for host::ReadSet {
@@ -13,7 +13,7 @@ impl From<ReadSet> for host::ReadSet {
             .inner
             .into_iter()
             .map(|entry| {
-                let general::FuzzyNodeKey::AccountAsset(k) = entry.key;
+                let FuzzyNodeKey::AccountAsset(k) = entry.key;
                 (
                     host::FuzzyNodeKey::AccountAsset(host::FuzzyCompositeKey(k.e0, k.e1)),
                     host::NodeValue::AccountAsset(host::AccountAssetR),
@@ -30,11 +30,11 @@ impl From<host::ReadSet> for ReadSet {
         let inner = host_ty
             .0
             .clone()
-            .into_iter()
-            .map(|(key, _value)| {
+            .into_keys()
+            .map(|key| {
                 let host::FuzzyNodeKey::AccountAsset(host::FuzzyCompositeKey(e0, e1)) = key;
                 ReadEntry {
-                    key: general::FuzzyNodeKey::AccountAsset(general::FuzzyCompositeKey { e0, e1 }),
+                    key: FuzzyNodeKey::AccountAsset(FuzzyCompositeKey { e0, e1 }),
                     value: NodeValueRead::AccountAsset,
                 }
             })
@@ -49,7 +49,7 @@ impl From<ViewSet> for host::ViewSet {
             .inner
             .into_iter()
             .map(|entry| {
-                let general::NodeKey::AccountAsset(k) = entry.key;
+                let NodeKey::AccountAsset(k) = entry.key;
                 let NodeValueView::AccountAsset(AccountAssetV { balance }) = entry.value;
                 (
                     host::NodeKey::AccountAsset(host::CompositeKey(k.e0, k.e1)),
@@ -72,7 +72,7 @@ impl From<host::ViewSet> for ViewSet {
                 let host::NodeKey::AccountAsset(host::CompositeKey(e0, e1)) = key;
                 let host::NodeValue::AccountAsset(host::AccountAssetV { balance }) = value;
                 ViewEntry {
-                    key: general::NodeKey::AccountAsset(general::CompositeKey { e0, e1 }),
+                    key: NodeKey::AccountAsset(CompositeKey { e0, e1 }),
                     value: NodeValueView::AccountAsset(AccountAssetV { balance }),
                 }
             })
@@ -83,11 +83,32 @@ impl From<host::ViewSet> for ViewSet {
 
 impl From<WriteSet> for host::WriteSet {
     fn from(guest_ty: WriteSet) -> Self {
-        let inner = guest_ty
-            .inner
+        let mut inner = guest_ty.inner;
+        inner.sort_unstable();
+        inner.dedup_by(|a, b| {
+            a.key == b.key
+                && match (&a.value, &mut b.value) {
+                    (
+                        NodeValueWrite::AccountAsset(AccountAssetW::Receive(a)),
+                        NodeValueWrite::AccountAsset(AccountAssetW::Receive(b)),
+                    ) => {
+                        *b += a;
+                        true
+                    }
+                    (
+                        NodeValueWrite::AccountAsset(AccountAssetW::Send(a)),
+                        NodeValueWrite::AccountAsset(AccountAssetW::Send(b)),
+                    ) => {
+                        *b += a;
+                        true
+                    }
+                    _ => false,
+                }
+        });
+        let inner = inner
             .into_iter()
             .map(|entry| {
-                let general::NodeKey::AccountAsset(k) = entry.key;
+                let NodeKey::AccountAsset(k) = entry.key;
                 let value = match entry.value {
                     NodeValueWrite::AccountAsset(AccountAssetW::Receive(amount)) => {
                         host::NodeValue::AccountAsset(host::AccountAssetW::Receive(amount))
@@ -124,7 +145,7 @@ impl From<host::WriteSet> for WriteSet {
                     }
                 };
                 WriteEntry {
-                    key: general::NodeKey::AccountAsset(general::CompositeKey { e0, e1 }),
+                    key: NodeKey::AccountAsset(CompositeKey { e0, e1 }),
                     value,
                 }
             })

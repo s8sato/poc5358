@@ -1,5 +1,6 @@
+package poc:wit;
+
 world universe {
-    include types;
     include command;
-    include authorizer;
+    // include authorizer;
 }

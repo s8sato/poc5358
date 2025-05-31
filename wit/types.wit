@@ -1,4 +1,5 @@
-interface general {
+interface types {
+// interface general {
     record context {
         height: u64,
         timestamp: u64,
@@ -32,10 +33,10 @@ interface general {
     variant fuzzy-node-key {
         account-asset(fuzzy-account-asset-k),
     }
-}
+// }
 
-interface read {
-    use general.{fuzzy-node-key};
+// interface read {
+    // use general.{fuzzy-node-key};
 
     record read-set {
         inner: list<read-entry>,
@@ -49,10 +50,10 @@ interface read {
     variant node-value-read {
         account-asset,
     }
-}
+// }
 
-interface view {
-    use general.{node-key};
+// interface view {
+    // use general.{node-key};
 
     record view-set {
         inner: list<view-entry>,
@@ -70,10 +71,10 @@ interface view {
     record account-asset-v {
         balance: u32,
     }
-}
+// }
 
-interface write {
-    use general.{node-key};
+// interface write {
+    // use general.{node-key};
 
     record write-set {
         inner: list<write-entry>,
@@ -92,11 +93,4 @@ interface write {
         send(u32),
         receive(u32),
     }
-}
-
-world types {
-    export general;
-    export read;
-    export view;
-    export write;
 }

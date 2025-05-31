@@ -1,4 +1,4 @@
-use poc::wit::{general, read::*, view::*, write::*};
+use poc::wit::types::*;
 use serde::Deserialize;
 
 wit_bindgen::generate!({
@@ -25,9 +25,9 @@ impl Guest for SupplyAll {
         let args: Args = serde_json::from_str(&args).expect("wrong args");
 
         let inner = vec![ReadEntry {
-            key: general::FuzzyNodeKey::AccountAsset(general::FuzzyCompositeKey {
+            key: FuzzyNodeKey::AccountAsset(FuzzyCompositeKey {
                 e0: None,
-                e1: Some(format!("{}", args.asset)),
+                e1: Some(args.asset.to_string()),
             }),
             value: NodeValueRead::AccountAsset,
         }];
@@ -42,10 +42,7 @@ impl Guest for SupplyAll {
             .inner
             .into_iter()
             .filter_map(|entry| {
-                #[expect(irrefutable_let_patterns)]
-                let NodeValueView::AccountAsset(value) = entry.value else {
-                    panic!("unexpected value type");
-                };
+                let NodeValueView::AccountAsset(value) = entry.value;
                 (value.balance < args.threshold).then(|| {
                     vec![
                         WriteEntry {
@@ -55,7 +52,7 @@ impl Guest for SupplyAll {
                             )),
                         },
                         WriteEntry {
-                            key: general::NodeKey::AccountAsset(general::CompositeKey {
+                            key: NodeKey::AccountAsset(CompositeKey {
                                 e0: args.supplier.clone(),
                                 e1: args.asset.clone(),
                             }),
