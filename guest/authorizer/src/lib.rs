@@ -7,12 +7,24 @@ wit_bindgen::generate!({
 
 struct Authorizer;
 
+/// Default implementation for permission validation.
 impl Guest for Authorizer {
-    fn read_approval(signals: EventSet, receptors: AllowSet) -> bool {
-        Self::write_approval(signals, receptors)
+    fn read_approval(signals: ReadSet, receptors: AllowSet) -> bool {
+        let mut signals = signals;
+        signals.inner.retain(|signal| {
+            let approved = receptors.inner.iter().any(|receptor| {
+                let captures = receptor.key.captures(&signal.key);
+                let NodeValueAllow::AccountAsset(AccountAssetA { bit_mask }) = receptor.value;
+                let passes = 0b0000_0001 & !bit_mask == 0;
+                captures && passes
+            });
+
+            !approved
+        });
+
+        signals.inner.is_empty()
     }
 
-    /// Default implementation for permission validation.
     fn write_approval(signals: EventSet, receptors: AllowSet) -> bool {
         let mut signals = signals;
         signals.inner.retain(|signal| {
@@ -42,18 +54,30 @@ impl Guest for Authorizer {
 export!(Authorizer);
 
 // TODO: move common types to separate crate from host
-pub trait Capture {
-    type Captured;
-    fn captures(&self, candidate: &Self::Captured) -> bool;
+pub trait Capture<T> {
+    fn captures(&self, candidate: &T) -> bool;
 }
 
-impl Capture for FuzzyNodeKey {
-    type Captured = NodeKey;
-    fn captures(&self, key: &Self::Captured) -> bool {
+impl Capture<NodeKey> for FuzzyNodeKey {
+    fn captures(&self, key: &NodeKey) -> bool {
         let (
             FuzzyNodeKey::AccountAsset(FuzzyCompositeKey { e0: z0, e1: z1 }),
             NodeKey::AccountAsset(CompositeKey { e0, e1 }),
         ) = (self, key);
         z0.as_ref().is_none_or(|z0| z0 == e0) && z1.as_ref().is_none_or(|z1| z1 == e1)
+    }
+}
+
+impl Capture<FuzzyNodeKey> for FuzzyNodeKey {
+    fn captures(&self, candidate: &FuzzyNodeKey) -> bool {
+        let (
+            FuzzyNodeKey::AccountAsset(FuzzyCompositeKey { e0: z0, e1: z1 }),
+            FuzzyNodeKey::AccountAsset(FuzzyCompositeKey { e0, e1 }),
+        ) = (self, candidate);
+        z0.as_ref()
+            .is_none_or(|z0| e0.as_ref().is_some_and(|e0| z0 == e0))
+            && z1
+                .as_ref()
+                .is_none_or(|z1| e1.as_ref().is_some_and(|e1| z1 == e1))
     }
 }

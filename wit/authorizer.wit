@@ -1,6 +1,6 @@
 world authorizer {
-    use types.{event-set, allow-set};
+    use types.{read-set, event-set, allow-set};
 
-    export read-approval: func(signals: event-set, receptors: allow-set) -> bool;
+    export read-approval: func(signals: read-set, receptors: allow-set) -> bool;
     export write-approval: func(signals: event-set, receptors: allow-set) -> bool;
 }
