@@ -2,6 +2,7 @@
 
 use crate::bindings;
 use crate::prelude as host;
+use crate::prelude::ExecutableK;
 
 use wasmtime_wasi::p2;
 
@@ -13,9 +14,7 @@ pub enum InstructionEnum {
 pub enum BuiltinInstruction {}
 
 pub struct WasmInstruction {
-    // TODO #5147: Reference the component compiled and registered in advance.
-    // component: WasmComponentId,
-    pub component: WasmComponent,
+    pub executable: ExecutableK,
     pub args: String,
 }
 
@@ -54,9 +53,17 @@ impl bindings::poc::wit::types::Host for InstructionState {}
 // --- State transition ---
 
 impl WasmInstruction {
-    pub fn initiate(self, authority: host::AccountK, authorizer: &WasmComponent) -> Init {
+    pub fn initiate(
+        self,
+        authority: host::AccountK,
+        authorizer: &WasmComponent,
+        state: &impl crate::state::WorldState,
+    ) -> Init {
         let host = HostState { args: self.args };
-        let engine = self.component.engine();
+        let executable = state
+            .executable(&self.executable)
+            .expect("executable not found in the world state");
+        let engine = executable.component.engine();
         let mut store = wasmtime::Store::new(
             engine,
             InstructionState {
@@ -71,8 +78,9 @@ impl WasmInstruction {
         bindings::Universe::add_to_linker(&mut linker, |state: &mut InstructionState| state)
             .expect("failed to add bindings to linker");
 
-        let instruction = bindings::Universe::instantiate(&mut store, &self.component, &linker)
-            .expect("failed to instantiate instruction component");
+        let instruction =
+            bindings::Universe::instantiate(&mut store, &executable.component, &linker)
+                .expect("failed to instantiate instruction component");
         let authorizer = bindings::Universe::instantiate(&mut store, authorizer, &linker)
             .expect("failed to instantiate authorizer component");
         let wasmtime = Wasmtime {

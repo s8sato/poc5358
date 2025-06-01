@@ -10,9 +10,9 @@ pub mod prelude {
 #[cfg(test)]
 mod tests {
     use prelude::{
-        AccountAssetA, AccountAssetK, AccountAssetV, AccountPermissionK, CompositeKey,
-        FlexFuzzyCompositeKey, FlexFuzzyNodeKey, FlexFuzzyTree, FlexKeyElem, NodeValue,
-        PermissionK, PermissionV, SingleKey,
+        AccountAssetA, AccountAssetK, AccountAssetV, AccountPermissionK, CompositeKey, ExecutableK,
+        ExecutableV, FlexFuzzyCompositeKey, FlexFuzzyNodeKey, FlexFuzzyTree, FlexKeyElem,
+        NodeValue, PermissionK, PermissionV, SingleKey,
     };
     use state::WorldState;
 
@@ -50,6 +50,7 @@ mod tests {
     #[test]
     fn instruction_flows() {
         let mut world = state::World {
+            executable: EXECUTABLE.clone(),
             permission: PERMISSION.clone(),
             account_asset: ACCOUNT_ASSET.clone(),
             account_permission: ACCOUNT_PERMISSION.clone(),
@@ -58,30 +59,22 @@ mod tests {
             .account_permission
             .insert(CompositeKey("alice".into(), "almighty".into()), ());
 
-        let supply_all = {
-            let component = component::Component::from_file(
-                &ENGINE,
-                "../target/wasm32-wasip2/debug/instruction.wasm",
-            )
-            .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
-
-            instruction::WasmInstruction {
-                component,
-                args: serde_json::json!({
-                    "asset": "rose",
-                    "threshold": 100,
-                    "supply_amount": 50,
-                    "supplier": "alice"
-                })
-                .to_string(),
-            }
+        let supply_all = instruction::WasmInstruction {
+            executable: SingleKey("supply_all".to_string()),
+            args: serde_json::json!({
+                "asset": "rose",
+                "threshold": 100,
+                "supply_amount": 50,
+                "supplier": "alice"
+            })
+            .to_string(),
         };
         let authority = SingleKey("alice".into());
         let permission = world.permission(&authority);
 
         println!("Initiating instruction");
         supply_all
-            .initiate(authority, &AUTHORIZER)
+            .initiate(authority, &AUTHORIZER, &world)
             .read_request()
             .read_approval(permission)
             .expect("read request should be approved")
@@ -127,6 +120,16 @@ mod tests {
             "../target/wasm32-wasip2/debug/authorizer.wasm",
         )
         .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/authorizer/Cargo.toml")
+    });
+
+    static EXECUTABLE: LazyLock<BTreeMap<ExecutableK, ExecutableV>> = LazyLock::new(|| {
+        let component = component::Component::from_file(
+                &ENGINE,
+                "../target/wasm32-wasip2/debug/instruction.wasm",
+            )
+            .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
+
+        [(SingleKey("supply_all".into()), ExecutableV { component })].into()
     });
 
     static PERMISSION: LazyLock<BTreeMap<PermissionK, PermissionV>> = LazyLock::new(|| {
@@ -202,6 +205,7 @@ mod tests {
     fn almighty_reads_and_sends_others() {
         let almighty = SingleKey("alice".into());
         let mut world = state::World {
+            executable: EXECUTABLE.clone(),
             permission: PERMISSION.clone(),
             account_asset: ACCOUNT_ASSET.clone(),
             account_permission: ACCOUNT_PERMISSION.clone(),
@@ -210,30 +214,22 @@ mod tests {
             .account_permission
             .insert(CompositeKey("alice".into(), "almighty".into()), ());
 
-        let supply_all = {
-            let component = component::Component::from_file(
-                &ENGINE,
-                "../target/wasm32-wasip2/debug/instruction.wasm",
-            )
-            .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
-
-            instruction::WasmInstruction {
-                component,
-                args: serde_json::json!({
-                    "asset": "rose",
-                    "threshold": 100,
-                    "supply_amount": 50,
-                    // The almighty can supply from anyone
-                    "supplier": "bob"
-                })
-                .to_string(),
-            }
+        let supply_all = instruction::WasmInstruction {
+            executable: SingleKey("supply_all".to_string()),
+            args: serde_json::json!({
+                "asset": "rose",
+                "threshold": 100,
+                "supply_amount": 50,
+                // The almighty can supply from anyone
+                "supplier": "bob"
+            })
+            .to_string(),
         };
         let permission = world.permission(&almighty);
 
         println!("Initiating instruction");
         supply_all
-            .initiate(almighty, &AUTHORIZER)
+            .initiate(almighty, &AUTHORIZER, &world)
             .read_request()
             .read_approval(permission)
             .expect("read request should be approved")
@@ -275,6 +271,7 @@ mod tests {
     fn inspector_reads_but_does_not_send_others() {
         let inspector = SingleKey("alice".into());
         let mut world = state::World {
+            executable: EXECUTABLE.clone(),
             permission: PERMISSION.clone(),
             account_asset: ACCOUNT_ASSET.clone(),
             account_permission: ACCOUNT_PERMISSION.clone(),
@@ -283,30 +280,22 @@ mod tests {
             .account_permission
             .insert(CompositeKey("alice".into(), "inspector".into()), ());
 
-        let supply_all = {
-            let component = component::Component::from_file(
-                &ENGINE,
-                "../target/wasm32-wasip2/debug/instruction.wasm",
-            )
-            .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
-
-            instruction::WasmInstruction {
-                component,
-                args: serde_json::json!({
-                    "asset": "rose",
-                    "threshold": 100,
-                    "supply_amount": 50,
-                    // The inspector cannot supply from others
-                    "supplier": "bob"
-                })
-                .to_string(),
-            }
+        let supply_all = instruction::WasmInstruction {
+            executable: SingleKey("supply_all".to_string()),
+            args: serde_json::json!({
+                "asset": "rose",
+                "threshold": 100,
+                "supply_amount": 50,
+                // The inspector cannot supply from others
+                "supplier": "bob"
+            })
+            .to_string(),
         };
         let permission = world.permission(&inspector);
 
         println!("Initiating instruction");
         let res = supply_all
-            .initiate(inspector, &AUTHORIZER)
+            .initiate(inspector, &AUTHORIZER, &world)
             .read_request()
             .read_approval(permission)
             .expect("read request should be approved")
@@ -348,36 +337,29 @@ mod tests {
     fn everyman_does_not_read_or_send_others() {
         let everyman = SingleKey("alice".into());
         let world = state::World {
+            executable: EXECUTABLE.clone(),
             permission: PERMISSION.clone(),
             account_asset: ACCOUNT_ASSET.clone(),
             account_permission: ACCOUNT_PERMISSION.clone(),
         };
 
-        let supply_all = {
-            let component = component::Component::from_file(
-                &ENGINE,
-                "../target/wasm32-wasip2/debug/instruction.wasm",
-            )
-            .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
-
-            instruction::WasmInstruction {
-                component,
-                args: serde_json::json!({
-                    // The everyman cannot read from others
-                    "asset": "rose",
-                    "threshold": 100,
-                    "supply_amount": 50,
-                    // The everyman cannot supply from others
-                    "supplier": "bob"
-                })
-                .to_string(),
-            }
+        let supply_all = instruction::WasmInstruction {
+            executable: SingleKey("supply_all".to_string()),
+            args: serde_json::json!({
+                // The everyman cannot read others
+                "asset": "rose",
+                "threshold": 100,
+                "supply_amount": 50,
+                // The everyman cannot supply from others
+                "supplier": "bob"
+            })
+            .to_string(),
         };
         let permission = world.permission(&everyman);
 
         println!("Initiating instruction");
         let res = supply_all
-            .initiate(everyman, &AUTHORIZER)
+            .initiate(everyman, &AUTHORIZER, &world)
             .read_request()
             .read_approval(permission);
 

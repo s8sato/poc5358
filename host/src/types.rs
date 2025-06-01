@@ -37,6 +37,7 @@ pub mod general {
     pub struct FlexCompositeKey(pub FlexKeyElem, pub KeyElem);
 
     pub type AccountK = SingleKey;
+    pub type ExecutableK = SingleKey;
     pub type PermissionK = SingleKey;
     pub type AccountAssetK = CompositeKey;
     pub type AccountPermissionK = CompositeKey;
@@ -222,6 +223,7 @@ pub mod read {
 
 pub mod view {
     use super::general::*;
+    use derive_more::Debug;
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct View;
@@ -241,6 +243,20 @@ pub mod view {
     pub struct PermissionV {
         pub permission: super::allow::AllowSet,
     }
+
+    #[derive(Debug, Clone)]
+    pub struct ExecutableV {
+        #[debug("Wasm Component")]
+        pub component: wasmtime::component::Component,
+    }
+
+    impl PartialEq for ExecutableV {
+        fn eq(&self, _other: &Self) -> bool {
+            unimplemented!("PoC does not support equality for ExecutableV")
+        }
+    }
+
+    impl Eq for ExecutableV {}
 }
 
 pub mod write {
