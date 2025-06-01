@@ -10,58 +10,66 @@ pub mod prelude {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::BTreeMap;
+    use std::sync::LazyLock;
     use types::{general::CompositeKey, general::SingleKey, view::AccountAssetV};
     use wasmtime::component;
 
+    static ACCOUNT_ASSET: LazyLock<BTreeMap<CompositeKey, AccountAssetV>> = LazyLock::new(|| {
+        [
+            (
+                CompositeKey("alice".into(), "rose".into()),
+                AccountAssetV { balance: 500 },
+            ),
+            (
+                CompositeKey("bob".into(), "rose".into()),
+                AccountAssetV { balance: 100 },
+            ),
+            (
+                CompositeKey("carol".into(), "rose".into()),
+                AccountAssetV { balance: 90 },
+            ),
+            (
+                CompositeKey("dave".into(), "rose".into()),
+                AccountAssetV { balance: 90 },
+            ),
+            (
+                CompositeKey("eve".into(), "tulip".into()),
+                AccountAssetV { balance: 90 },
+            ),
+        ]
+        .into()
+    });
+
     #[test]
     fn instruction_flows() {
-        let engine = wasmtime::Engine::default();
-        let component = component::Component::from_file(
-            &engine,
-            "../target/wasm32-wasip2/debug/instruction.wasm",
-        )
-        .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
+        let mut world = state::World {
+            account_asset: ACCOUNT_ASSET.clone(),
+        };
 
-        let mut world = {
-            let account_asset = [
-                (
-                    CompositeKey("alice".into(), "rose".into()),
-                    AccountAssetV { balance: 500 },
-                ),
-                (
-                    CompositeKey("bob".into(), "rose".into()),
-                    AccountAssetV { balance: 100 },
-                ),
-                (
-                    CompositeKey("carol".into(), "rose".into()),
-                    AccountAssetV { balance: 90 },
-                ),
-                (
-                    CompositeKey("dave".into(), "rose".into()),
-                    AccountAssetV { balance: 90 },
-                ),
-                (
-                    CompositeKey("eve".into(), "tulip".into()),
-                    AccountAssetV { balance: 90 },
-                ),
-            ]
-            .into();
-            state::World { account_asset }
+        let supply_all = {
+            let engine = wasmtime::Engine::default();
+            let component = component::Component::from_file(
+                &engine,
+                "../target/wasm32-wasip2/debug/instruction.wasm",
+            )
+            .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
+
+            instruction::WasmInstruction {
+                component,
+                args: serde_json::json!({
+                    "asset": "rose",
+                    "threshold": 100,
+                    "supply_amount": 50,
+                    "supplier": "alice"
+                })
+                .to_string(),
+            }
         };
-        let supply_all = instruction::WasmInstruction {
-            component,
-            args: serde_json::json!({
-                "asset": "rose",
-                "threshold": 100,
-                "supply_amount": 50,
-                "supplier": "alice"
-            })
-            .to_string(),
-        };
+        let authority = SingleKey("alice".into());
 
         println!("Initiating instruction");
-        let authority = SingleKey("alice".into());
-        instruction::initiate(supply_all, &engine, authority)
+        instruction::initiate(supply_all, authority)
             .read_request()
             .read_approval()
             .expect("read request should be approved")

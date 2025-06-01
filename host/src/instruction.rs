@@ -52,14 +52,11 @@ impl bindings::poc::wit::types::Host for InstructionState {}
 
 // --- State transition ---
 
-pub fn initiate(
-    instruction: WasmInstruction,
-    engine: &wasmtime::Engine,
-    authority: host::AccountK,
-) -> Init {
+pub fn initiate(instruction: WasmInstruction, authority: host::AccountK) -> Init {
     let host = HostState {
         args: instruction.args,
     };
+    let engine = instruction.component.engine();
     let mut store = wasmtime::Store::new(
         engine,
         InstructionState {
