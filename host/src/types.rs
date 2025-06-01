@@ -1,5 +1,3 @@
-#![expect(dead_code)]
-
 pub mod general {
     use std::collections::BTreeMap;
 

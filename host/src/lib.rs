@@ -3,7 +3,7 @@ mod instruction;
 mod state;
 mod types;
 
-mod prelude {
+pub mod prelude {
     pub use super::types::{allow::*, event::*, general::*, read::*, view::*, write::*};
 }
 
