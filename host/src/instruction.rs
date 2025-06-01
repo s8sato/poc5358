@@ -56,7 +56,6 @@ impl WasmInstruction {
     pub fn initiate(
         self,
         authority: host::AccountK,
-        authorizer: &WasmComponent,
         world: &impl crate::state::WorldState,
     ) -> Init {
         let host = HostState { args: self.args };
@@ -81,7 +80,7 @@ impl WasmInstruction {
         let instruction =
             bindings::Universe::instantiate(&mut store, &executable.component, &linker)
                 .expect("failed to instantiate instruction component");
-        let authorizer = bindings::Universe::instantiate(&mut store, authorizer, &linker)
+        let authorizer = bindings::Universe::instantiate(&mut store, world.authorizer(), &linker)
             .expect("failed to instantiate authorizer component");
         let wasmtime = Wasmtime {
             instruction,

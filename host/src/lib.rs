@@ -49,6 +49,7 @@ mod tests {
     #[test]
     fn instruction_flows() {
         let mut world = state::World {
+            authorizer: AUTHORIZER.clone(),
             executable: EXECUTABLE.clone(),
             permission: PERMISSION.clone(),
             account_asset: ACCOUNT_ASSET.clone(),
@@ -72,7 +73,7 @@ mod tests {
 
         println!("Initiating instruction");
         supply_all
-            .initiate(authority, &AUTHORIZER, &world)
+            .initiate(authority, &world)
             .read_request()
             .read_approval(&world)
             .expect("read request should be approved")
@@ -203,6 +204,7 @@ mod tests {
     fn almighty_reads_and_sends_others() {
         let almighty = SingleKey("alice".into());
         let mut world = state::World {
+            authorizer: AUTHORIZER.clone(),
             executable: EXECUTABLE.clone(),
             permission: PERMISSION.clone(),
             account_asset: ACCOUNT_ASSET.clone(),
@@ -226,7 +228,7 @@ mod tests {
 
         println!("Initiating instruction");
         supply_all
-            .initiate(almighty, &AUTHORIZER, &world)
+            .initiate(almighty, &world)
             .read_request()
             .read_approval(&world)
             .expect("read request should be approved")
@@ -268,6 +270,7 @@ mod tests {
     fn inspector_reads_but_does_not_send_others() {
         let inspector = SingleKey("alice".into());
         let mut world = state::World {
+            authorizer: AUTHORIZER.clone(),
             executable: EXECUTABLE.clone(),
             permission: PERMISSION.clone(),
             account_asset: ACCOUNT_ASSET.clone(),
@@ -291,7 +294,7 @@ mod tests {
 
         println!("Initiating instruction");
         let res = supply_all
-            .initiate(inspector, &AUTHORIZER, &world)
+            .initiate(inspector, &world)
             .read_request()
             .read_approval(&world)
             .expect("read request should be approved")
@@ -333,6 +336,7 @@ mod tests {
     fn everyman_does_not_read_or_send_others() {
         let everyman = SingleKey("alice".into());
         let world = state::World {
+            authorizer: AUTHORIZER.clone(),
             executable: EXECUTABLE.clone(),
             permission: PERMISSION.clone(),
             account_asset: ACCOUNT_ASSET.clone(),
@@ -354,7 +358,7 @@ mod tests {
 
         println!("Initiating instruction");
         let res = supply_all
-            .initiate(everyman, &AUTHORIZER, &world)
+            .initiate(everyman, &world)
             .read_request()
             .read_approval(&world);
 

@@ -3,6 +3,7 @@ use std::collections::BTreeMap;
 use crate::prelude::*;
 
 pub trait WorldState {
+    fn authorizer(&self) -> &crate::instruction::WasmComponent;
     fn executable(&self, executable: &ExecutableK) -> Option<&ExecutableV>;
     fn permission(&self, authority: &AccountK) -> AllowSet;
     fn read(&self, request: &ReadSet) -> ViewSet;
@@ -10,6 +11,7 @@ pub trait WorldState {
 }
 
 pub struct World {
+    pub authorizer: crate::instruction::WasmComponent,
     pub executable: BTreeMap<ExecutableK, ExecutableV>,
     pub permission: BTreeMap<PermissionK, PermissionV>,
     pub account_asset: BTreeMap<AccountAssetK, AccountAssetV>,
@@ -17,6 +19,10 @@ pub struct World {
 }
 
 impl WorldState for World {
+    fn authorizer(&self) -> &crate::instruction::WasmComponent {
+        &self.authorizer
+    }
+
     fn executable(&self, executable: &ExecutableK) -> Option<&ExecutableV> {
         self.executable.get(executable)
     }
