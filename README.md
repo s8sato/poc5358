@@ -52,7 +52,11 @@ cargo build --target wasm32-wasip2 --manifest-path guest/authorizer/Cargo.toml
 ### Host tests
 
 ```bash
-cargo test --package host --lib -- tests::instruction_flow --exact --show-output 
+cargo test --package host --lib
+```
+
+```bash
+cargo test --package host --lib -- tests::instruction_flows --exact --show-output
 ```
 
 Compare the test steps to the #5358 state-transition diagram for clarity.
