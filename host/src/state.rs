@@ -3,18 +3,49 @@ use std::collections::BTreeMap;
 use crate::prelude::*;
 
 pub trait WorldState {
+    #[cfg(test)]
+    fn permission(&self, authority: &AccountK) -> AllowSet;
     fn read(&self, request: &ReadSet) -> ViewSet;
     fn write(&mut self, request: &WriteSet, authority: AccountK);
 }
 
-#[expect(dead_code)]
 pub struct World {
+    #[cfg(test)]
     pub permission: BTreeMap<PermissionK, PermissionV>,
     pub account_asset: BTreeMap<AccountAssetK, AccountAssetV>,
+    #[cfg(test)]
     pub account_permission: BTreeMap<AccountPermissionK, ()>,
 }
 
 impl WorldState for World {
+    #[cfg(test)]
+    fn permission(&self, authority: &AccountK) -> AllowSet {
+        let permission_keys: Vec<_> = self
+            .account_permission
+            .keys()
+            .filter_map(|key| (key.0 == authority.0).then_some(key.1.clone()))
+            .collect();
+        let permission_union = self
+            .permission
+            .iter()
+            .filter(|(k, _)| permission_keys.contains(&k.0))
+            .map(|(_, v)| v.permission.0.clone())
+            .fold(BTreeMap::new(), |mut acc, curr| {
+                for (k, v) in curr {
+                    acc.entry(k)
+                        .and_modify(|e| {
+                            let NodeValue::AccountAsset(AccountAssetA { bit_mask: acc }) = e;
+                            let NodeValue::AccountAsset(AccountAssetA { bit_mask: curr }) = v;
+                            *acc |= curr;
+                        })
+                        .or_insert(v);
+                }
+                acc
+            });
+
+        FlexFuzzyTree(permission_union)
+    }
+
     fn read(&self, request: &ReadSet) -> ViewSet {
         let keys: Vec<&AccountAssetK> = self
             .account_asset

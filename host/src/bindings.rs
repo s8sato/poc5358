@@ -259,6 +259,35 @@ impl From<(host::AllowSet, host::AccountK)> for AllowSet {
     }
 }
 
+impl From<&WriteSet> for EventSet {
+    fn from(write_set: &WriteSet) -> Self {
+        let inner = write_set
+            .inner
+            .iter()
+            .map(|entry| {
+                let value = match entry.value {
+                    NodeValueWrite::AccountAsset(AccountAssetW::Send(_)) => {
+                        NodeValueEvent::AccountAsset(AccountAssetE {
+                            status_bit: 0b0000_00100,
+                        })
+                    }
+                    NodeValueWrite::AccountAsset(AccountAssetW::Receive(_)) => {
+                        NodeValueEvent::AccountAsset(AccountAssetE {
+                            status_bit: 0b0000_00010,
+                        })
+                    }
+                };
+                EventEntry {
+                    key: entry.key.clone(),
+                    value,
+                }
+            })
+            .collect();
+
+        EventSet { inner }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::prelude::{FlexCompositeKey, FlexKeyElem};

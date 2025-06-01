@@ -263,7 +263,7 @@ pub mod write {
 }
 
 pub mod event {
-    use super::general::*;
+    use super::{general::*, write::AccountAssetW, write::WriteSet};
 
     #[derive(Debug, Clone, PartialEq, Eq)]
     pub struct Event;
@@ -282,6 +282,28 @@ pub mod event {
         Send = 0b0000_0100,
         Mint = 0b0001_0000,
         Burn = 0b0010_0000,
+    }
+
+    impl From<(WriteSet, AccountK)> for EventSet {
+        fn from((write_set, authority): (WriteSet, AccountK)) -> Self {
+            Tree(
+                write_set
+                    .0
+                    .into_iter()
+                    .map(|(k, v)| {
+                        let value = match v {
+                            NodeValue::AccountAsset(AccountAssetW::Send(_)) => {
+                                NodeValue::AccountAsset(AccountAssetE::Send)
+                            }
+                            NodeValue::AccountAsset(AccountAssetW::Receive(_)) => {
+                                NodeValue::AccountAsset(AccountAssetE::Receive)
+                            }
+                        };
+                        (k.resolve(authority.0.clone()), value)
+                    })
+                    .collect(),
+            )
+        }
     }
 }
 

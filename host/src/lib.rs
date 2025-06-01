@@ -14,6 +14,7 @@ mod tests {
         FlexFuzzyCompositeKey, FlexFuzzyNodeKey, FlexFuzzyTree, FlexKeyElem, NodeValue,
         PermissionK, PermissionV, SingleKey,
     };
+    use state::WorldState;
 
     use super::*;
     use std::collections::BTreeMap;
@@ -74,12 +75,13 @@ mod tests {
             }
         };
         let authority = SingleKey("alice".into());
+        let permission = world.permission(&authority);
 
         println!("Initiating instruction");
         supply_all
             .initiate(authority)
             .read_request()
-            .read_approval()
+            .read_approval(permission)
             .expect("read request should be approved")
             .read(&world)
             .expect("should read")
@@ -216,12 +218,13 @@ mod tests {
                 .to_string(),
             }
         };
+        let permission = world.permission(&almighty);
 
         println!("Initiating instruction");
         supply_all
             .initiate(almighty)
             .read_request()
-            .read_approval()
+            .read_approval(permission)
             .expect("read request should be approved")
             .read(&world)
             .expect("should read")
@@ -290,12 +293,13 @@ mod tests {
                 .to_string(),
             }
         };
+        let permission = world.permission(&inspector);
 
         println!("Initiating instruction");
         let res = supply_all
             .initiate(inspector)
             .read_request()
-            .read_approval()
+            .read_approval(permission)
             .expect("read request should be approved")
             .read(&world)
             .expect("should read")
@@ -362,9 +366,13 @@ mod tests {
                 .to_string(),
             }
         };
+        let permission = world.permission(&everyman);
 
         println!("Initiating instruction");
-        let res = supply_all.initiate(everyman).read_request().read_approval();
+        let res = supply_all
+            .initiate(everyman)
+            .read_request()
+            .read_approval(permission);
 
         assert!(res.is_err(), "read request should be rejected");
 

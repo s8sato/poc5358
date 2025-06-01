@@ -113,17 +113,27 @@ pub struct ToRead {
 }
 
 impl ToRead {
-    pub fn read_approval(self) -> Result<Reading, ()> {
+    pub fn read_approval(self, permission: host::AllowSet) -> Result<Reading, ()> {
         let ToRead {
             authority,
-            wasmtime,
+            mut wasmtime,
             request,
         } = self;
-        // TODO: seek approval from the authorizer
+        let permission = bindings::AllowSet::from((permission, authority.clone()));
+
+        let verdict = wasmtime
+            .universe
+            .call_read_approval(&mut wasmtime.store, &request, &permission)
+            .expect("failed to call read_approval function");
+        if !verdict {
+            return Err(());
+        }
+
         Ok(Reading {
             authority,
             wasmtime,
             request,
+            permission,
         })
     }
 }
@@ -132,6 +142,7 @@ pub struct Reading {
     authority: host::AccountK,
     wasmtime: Wasmtime,
     request: bindings::ReadSet,
+    permission: bindings::AllowSet,
 }
 
 impl Reading {
@@ -140,6 +151,7 @@ impl Reading {
             authority,
             wasmtime,
             request,
+            permission,
         } = self;
         let request = host::ReadSet::from(request);
         println!("Reading request: {:#?}", &request);
@@ -149,6 +161,7 @@ impl Reading {
             authority,
             wasmtime,
             result,
+            permission,
         })
     }
 }
@@ -157,6 +170,7 @@ pub struct HasRead {
     authority: host::AccountK,
     wasmtime: Wasmtime,
     result: bindings::ViewSet,
+    permission: bindings::AllowSet,
 }
 
 impl HasRead {
@@ -166,25 +180,47 @@ impl HasRead {
             authority,
             mut wasmtime,
             result,
+            permission,
         } = self;
         let request = wasmtime
             .universe
             .call_write_request(&mut wasmtime.store, &result, &args)
             .expect("failed to call write_request function");
 
-        ToWrite { authority, request }
+        ToWrite {
+            authority,
+            wasmtime,
+            permission,
+            request,
+        }
     }
 }
 
 pub struct ToWrite {
     authority: host::AccountK,
+    wasmtime: Wasmtime,
     request: bindings::WriteSet,
+    permission: bindings::AllowSet,
 }
 
 impl ToWrite {
     pub fn write_approval(self) -> Result<Writing, ()> {
-        let ToWrite { authority, request } = self;
-        // TODO: seek approval from the authorizer
+        let ToWrite {
+            authority,
+            mut wasmtime,
+            request,
+            permission,
+        } = self;
+        let intent = bindings::EventSet::from(&request);
+
+        let verdict = wasmtime
+            .universe
+            .call_write_approval(&mut wasmtime.store, &intent, &permission)
+            .expect("failed to call write_approval function");
+        if !verdict {
+            return Err(());
+        }
+
         Ok(Writing { authority, request })
     }
 }
