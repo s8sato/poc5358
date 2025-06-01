@@ -14,7 +14,6 @@ mod tests {
         ExecutableV, FlexFuzzyCompositeKey, FlexFuzzyNodeKey, FlexFuzzyTree, FlexKeyElem,
         NodeValue, PermissionK, PermissionV, SingleKey,
     };
-    use state::WorldState;
 
     use super::*;
     use std::collections::BTreeMap;
@@ -70,13 +69,12 @@ mod tests {
             .to_string(),
         };
         let authority = SingleKey("alice".into());
-        let permission = world.permission(&authority);
 
         println!("Initiating instruction");
         supply_all
             .initiate(authority, &AUTHORIZER, &world)
             .read_request()
-            .read_approval(permission)
+            .read_approval(&world)
             .expect("read request should be approved")
             .read(&world)
             .expect("should read")
@@ -225,13 +223,12 @@ mod tests {
             })
             .to_string(),
         };
-        let permission = world.permission(&almighty);
 
         println!("Initiating instruction");
         supply_all
             .initiate(almighty, &AUTHORIZER, &world)
             .read_request()
-            .read_approval(permission)
+            .read_approval(&world)
             .expect("read request should be approved")
             .read(&world)
             .expect("should read")
@@ -291,13 +288,12 @@ mod tests {
             })
             .to_string(),
         };
-        let permission = world.permission(&inspector);
 
         println!("Initiating instruction");
         let res = supply_all
             .initiate(inspector, &AUTHORIZER, &world)
             .read_request()
-            .read_approval(permission)
+            .read_approval(&world)
             .expect("read request should be approved")
             .read(&world)
             .expect("should read")
@@ -355,13 +351,12 @@ mod tests {
             })
             .to_string(),
         };
-        let permission = world.permission(&everyman);
 
         println!("Initiating instruction");
         let res = supply_all
             .initiate(everyman, &AUTHORIZER, &world)
             .read_request()
-            .read_approval(permission);
+            .read_approval(&world);
 
         assert!(res.is_err(), "read request should be rejected");
 

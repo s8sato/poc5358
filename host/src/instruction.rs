@@ -57,10 +57,10 @@ impl WasmInstruction {
         self,
         authority: host::AccountK,
         authorizer: &WasmComponent,
-        state: &impl crate::state::WorldState,
+        world: &impl crate::state::WorldState,
     ) -> Init {
         let host = HostState { args: self.args };
-        let executable = state
+        let executable = world
             .executable(&self.executable)
             .expect("executable not found in the world state");
         let engine = executable.component.engine();
@@ -128,12 +128,13 @@ pub struct ToRead {
 }
 
 impl ToRead {
-    pub fn read_approval(self, permission: host::AllowSet) -> Result<Reading, ()> {
+    pub fn read_approval(self, world: &impl crate::state::WorldState) -> Result<Reading, ()> {
         let ToRead {
             authority,
             mut wasmtime,
             request,
         } = self;
+        let permission = world.permission(&authority);
         let permission = bindings::AllowSet::from((permission, authority.clone()));
 
         let verdict = wasmtime
@@ -161,7 +162,7 @@ pub struct Reading {
 }
 
 impl Reading {
-    pub fn read(self, state: &impl crate::state::WorldState) -> Result<HasRead, ()> {
+    pub fn read(self, world: &impl crate::state::WorldState) -> Result<HasRead, ()> {
         let Reading {
             authority,
             wasmtime,
@@ -170,7 +171,7 @@ impl Reading {
         } = self;
         let request = host::ReadSet::from(request);
         println!("Reading request: {:#?}", &request);
-        let result = state.read(&request).into();
+        let result = world.read(&request).into();
 
         Ok(HasRead {
             authority,
@@ -246,11 +247,11 @@ pub struct Writing {
 }
 
 impl Writing {
-    pub fn write(self, state: &mut impl crate::state::WorldState) -> Result<HasWritten, ()> {
+    pub fn write(self, world: &mut impl crate::state::WorldState) -> Result<HasWritten, ()> {
         let Writing { authority, request } = self;
         let request = host::WriteSet::from(request);
         println!("Writing request: {:#?}", &request);
-        state.write(&request, authority.clone());
+        world.write(&request, authority.clone());
         let result = (request, authority).into();
 
         Ok(HasWritten { result })

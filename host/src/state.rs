@@ -4,7 +4,6 @@ use crate::prelude::*;
 
 pub trait WorldState {
     fn executable(&self, executable: &ExecutableK) -> Option<&ExecutableV>;
-    #[cfg(test)]
     fn permission(&self, authority: &AccountK) -> AllowSet;
     fn read(&self, request: &ReadSet) -> ViewSet;
     fn write(&mut self, request: &WriteSet, authority: AccountK);
@@ -12,10 +11,8 @@ pub trait WorldState {
 
 pub struct World {
     pub executable: BTreeMap<ExecutableK, ExecutableV>,
-    #[cfg(test)]
     pub permission: BTreeMap<PermissionK, PermissionV>,
     pub account_asset: BTreeMap<AccountAssetK, AccountAssetV>,
-    #[cfg(test)]
     pub account_permission: BTreeMap<AccountPermissionK, ()>,
 }
 
@@ -24,7 +21,6 @@ impl WorldState for World {
         self.executable.get(executable)
     }
 
-    #[cfg(test)]
     fn permission(&self, authority: &AccountK) -> AllowSet {
         let permission_keys: Vec<_> = self
             .account_permission
