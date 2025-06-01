@@ -53,7 +53,7 @@ impl bindings::poc::wit::types::Host for InstructionState {}
 // --- State transition ---
 
 impl WasmInstruction {
-    pub fn initiate(self, authority: host::AccountK) -> Init {
+    pub fn initiate(self, authority: host::AccountK, authorizer: &WasmComponent) -> Init {
         let host = HostState { args: self.args };
         let engine = self.component.engine();
         let mut store = wasmtime::Store::new(
@@ -70,8 +70,10 @@ impl WasmInstruction {
         bindings::Universe::add_to_linker(&mut linker, |state: &mut InstructionState| state)
             .expect("failed to add bindings to linker");
 
+        let _universe = bindings::Universe::instantiate(&mut store, &authorizer, &linker)
+            .expect("failed to instantiate authorizer component");
         let universe = bindings::Universe::instantiate(&mut store, &self.component, &linker)
-            .expect("failed to instantiate component");
+            .expect("failed to instantiate instruction component");
         let wasmtime = Wasmtime { universe, store };
 
         Init {

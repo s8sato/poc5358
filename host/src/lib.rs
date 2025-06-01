@@ -79,7 +79,7 @@ mod tests {
 
         println!("Initiating instruction");
         supply_all
-            .initiate(authority)
+            .initiate(authority, &AUTHORIZER)
             .read_request()
             .read_approval(permission)
             .expect("read request should be approved")
@@ -116,6 +116,15 @@ mod tests {
 
         assert_eq!(world.account_asset, expected.into());
     }
+
+    static AUTHORIZER: LazyLock<wasmtime::component::Component> = LazyLock::new(|| {
+        let engine = wasmtime::Engine::default();
+        component::Component::from_file(
+            &engine,
+            "../target/wasm32-wasip2/debug/authorizer.wasm",
+        )
+        .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/authorizer/Cargo.toml")
+    });
 
     static PERMISSION: LazyLock<BTreeMap<PermissionK, PermissionV>> = LazyLock::new(|| {
         [
@@ -222,7 +231,7 @@ mod tests {
 
         println!("Initiating instruction");
         supply_all
-            .initiate(almighty)
+            .initiate(almighty, &AUTHORIZER)
             .read_request()
             .read_approval(permission)
             .expect("read request should be approved")
@@ -297,7 +306,7 @@ mod tests {
 
         println!("Initiating instruction");
         let res = supply_all
-            .initiate(inspector)
+            .initiate(inspector, &AUTHORIZER)
             .read_request()
             .read_approval(permission)
             .expect("read request should be approved")
@@ -370,7 +379,7 @@ mod tests {
 
         println!("Initiating instruction");
         let res = supply_all
-            .initiate(everyman)
+            .initiate(everyman, &AUTHORIZER)
             .read_request()
             .read_approval(permission);
 
