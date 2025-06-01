@@ -52,32 +52,32 @@ impl bindings::poc::wit::types::Host for InstructionState {}
 
 // --- State transition ---
 
-pub fn initiate(instruction: WasmInstruction, authority: host::AccountK) -> Init {
-    let host = HostState {
-        args: instruction.args,
-    };
-    let engine = instruction.component.engine();
-    let mut store = wasmtime::Store::new(
-        engine,
-        InstructionState {
-            host,
-            wasi: p2::WasiCtxBuilder::new().build(),
-            resource_table: wasmtime_wasi::ResourceTable::new(),
-        },
-    );
+impl WasmInstruction {
+    pub fn initiate(self, authority: host::AccountK) -> Init {
+        let host = HostState { args: self.args };
+        let engine = self.component.engine();
+        let mut store = wasmtime::Store::new(
+            engine,
+            InstructionState {
+                host,
+                wasi: p2::WasiCtxBuilder::new().build(),
+                resource_table: wasmtime_wasi::ResourceTable::new(),
+            },
+        );
 
-    let mut linker = wasmtime::component::Linker::new(engine);
-    p2::add_to_linker_sync(&mut linker).expect("failed to add WASI bindings to linker");
-    bindings::Universe::add_to_linker(&mut linker, |state: &mut InstructionState| state)
-        .expect("failed to add bindings to linker");
+        let mut linker = wasmtime::component::Linker::new(engine);
+        p2::add_to_linker_sync(&mut linker).expect("failed to add WASI bindings to linker");
+        bindings::Universe::add_to_linker(&mut linker, |state: &mut InstructionState| state)
+            .expect("failed to add bindings to linker");
 
-    let universe = bindings::Universe::instantiate(&mut store, &instruction.component, &linker)
-        .expect("failed to instantiate component");
-    let wasmtime = Wasmtime { universe, store };
+        let universe = bindings::Universe::instantiate(&mut store, &self.component, &linker)
+            .expect("failed to instantiate component");
+        let wasmtime = Wasmtime { universe, store };
 
-    Init {
-        authority,
-        wasmtime,
+        Init {
+            authority,
+            wasmtime,
+        }
     }
 }
 

@@ -233,6 +233,11 @@ pub mod view {
     pub struct AccountAssetV {
         pub balance: u32,
     }
+
+    #[derive(Debug, Clone, PartialEq, Eq)]
+    pub struct PermissionV {
+        pub permission: super::allow::AllowSet,
+    }
 }
 
 pub mod write {
