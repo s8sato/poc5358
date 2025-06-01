@@ -56,8 +56,9 @@ mod tests {
         };
 
         let supply_all = {
+            let engine = wasmtime::Engine::default();
             let component = component::Component::from_file(
-                &ENGINE,
+                &engine,
                 "../target/wasm32-wasip2/debug/instruction.wasm",
             )
             .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
@@ -116,13 +117,10 @@ mod tests {
         assert_eq!(world.account_asset, expected.into());
     }
 
-    static ENGINE: LazyLock<wasmtime::Engine> = LazyLock::new(|| {
-        wasmtime::Engine::default()
-    });
-
     static AUTHORIZER: LazyLock<wasmtime::component::Component> = LazyLock::new(|| {
+        let engine = wasmtime::Engine::default();
         component::Component::from_file(
-            &ENGINE,
+            &engine,
             "../target/wasm32-wasip2/debug/authorizer.wasm",
         )
         .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/authorizer/Cargo.toml")
@@ -210,8 +208,9 @@ mod tests {
             .insert(CompositeKey("alice".into(), "almighty".into()), ());
 
         let supply_all = {
+            let engine = wasmtime::Engine::default();
             let component = component::Component::from_file(
-                &ENGINE,
+                &engine,
                 "../target/wasm32-wasip2/debug/instruction.wasm",
             )
             .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
@@ -284,8 +283,9 @@ mod tests {
             .insert(CompositeKey("alice".into(), "inspector".into()), ());
 
         let supply_all = {
+            let engine = wasmtime::Engine::default();
             let component = component::Component::from_file(
-                &ENGINE,
+                &engine,
                 "../target/wasm32-wasip2/debug/instruction.wasm",
             )
             .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
@@ -355,8 +355,9 @@ mod tests {
         };
 
         let supply_all = {
+            let engine = wasmtime::Engine::default();
             let component = component::Component::from_file(
-                &ENGINE,
+                &engine,
                 "../target/wasm32-wasip2/debug/instruction.wasm",
             )
             .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
