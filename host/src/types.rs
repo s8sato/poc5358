@@ -2,6 +2,7 @@ pub mod general {
     use std::collections::BTreeMap;
 
     pub trait Mode {
+        // PoC only supports AccountAsset variant
         type AccountAsset: std::fmt::Debug + Clone + PartialEq + Eq;
     }
 
@@ -36,7 +37,9 @@ pub mod general {
     pub struct FlexCompositeKey(pub FlexKeyElem, pub KeyElem);
 
     pub type AccountK = SingleKey;
+    pub type PermissionK = SingleKey;
     pub type AccountAssetK = CompositeKey;
+    pub type AccountPermissionK = CompositeKey;
     pub type FlexAccountAssetK = FlexCompositeKey;
 
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

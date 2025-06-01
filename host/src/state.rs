@@ -7,8 +7,11 @@ pub trait WorldState {
     fn write(&mut self, request: &WriteSet, authority: AccountK);
 }
 
+#[expect(dead_code)]
 pub struct World {
+    pub permission: BTreeMap<PermissionK, PermissionV>,
     pub account_asset: BTreeMap<AccountAssetK, AccountAssetV>,
+    pub account_permission: BTreeMap<AccountPermissionK, ()>,
 }
 
 impl WorldState for World {

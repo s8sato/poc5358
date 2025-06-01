@@ -8,11 +8,11 @@ pub mod prelude {
 }
 
 #[cfg(test)]
-#[expect(dead_code)]
 mod tests {
     use prelude::{
-        AccountAssetA, AccountAssetV, CompositeKey, FlexFuzzyCompositeKey, FlexFuzzyNodeKey,
-        FlexFuzzyTree, FlexKeyElem, NodeValue, PermissionV, SingleKey,
+        AccountAssetA, AccountAssetK, AccountAssetV, AccountPermissionK, CompositeKey,
+        FlexFuzzyCompositeKey, FlexFuzzyNodeKey, FlexFuzzyTree, FlexKeyElem, NodeValue,
+        PermissionK, PermissionV, SingleKey,
     };
 
     use super::*;
@@ -20,7 +20,7 @@ mod tests {
     use std::sync::LazyLock;
     use wasmtime::component;
 
-    static ACCOUNT_ASSET: LazyLock<BTreeMap<CompositeKey, AccountAssetV>> = LazyLock::new(|| {
+    static ACCOUNT_ASSET: LazyLock<BTreeMap<AccountAssetK, AccountAssetV>> = LazyLock::new(|| {
         [
             (
                 CompositeKey("alice".into(), "rose".into()),
@@ -49,7 +49,9 @@ mod tests {
     #[test]
     fn instruction_flows() {
         let mut world = state::World {
+            permission: BTreeMap::new(),
             account_asset: ACCOUNT_ASSET.clone(),
+            account_permission: BTreeMap::new(),
         };
 
         let supply_all = {
@@ -113,7 +115,7 @@ mod tests {
         assert_eq!(world.account_asset, expected.into());
     }
 
-    static PERMISSION: LazyLock<BTreeMap<SingleKey, PermissionV>> = LazyLock::new(|| {
+    static PERMISSION: LazyLock<BTreeMap<PermissionK, PermissionV>> = LazyLock::new(|| {
         [
             (
                 SingleKey("almighty".into()),
@@ -171,7 +173,7 @@ mod tests {
         .into()
     });
 
-    static ACCOUNT_PERMISSION: LazyLock<BTreeMap<CompositeKey, ()>> = LazyLock::new(|| {
+    static ACCOUNT_PERMISSION: LazyLock<BTreeMap<AccountPermissionK, ()>> = LazyLock::new(|| {
         [
             (CompositeKey("alice".into(), "everyman".into()), ()),
             (CompositeKey("bob".into(), "everyman".into()), ()),
@@ -183,20 +185,16 @@ mod tests {
     });
 
     #[test]
-    #[ignore = "reason: not implemented yet"]
     fn almighty_reads_and_sends_others() {
         let almighty = SingleKey("alice".into());
         let mut world = state::World {
-            // permission: PERMISSION.clone(),
+            permission: PERMISSION.clone(),
             account_asset: ACCOUNT_ASSET.clone(),
-            // account_permission: ACCOUNT_PERMISSION.clone(),
+            account_permission: ACCOUNT_PERMISSION.clone(),
         };
-        // world.permission.insert(
-        //     (
-        //         CompositeKey("alice".into(), "almighty".into()),
-        //         (),
-        //     ),
-        // );
+        world
+            .account_permission
+            .insert(CompositeKey("alice".into(), "almighty".into()), ());
 
         let supply_all = {
             let engine = wasmtime::Engine::default();
@@ -204,16 +202,16 @@ mod tests {
                 &engine,
                 "../target/wasm32-wasip2/debug/instruction.wasm",
             )
-            .expect("failed to load component");
+            .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
 
             instruction::WasmInstruction {
                 component,
                 args: serde_json::json!({
                     "asset": "rose",
                     "threshold": 100,
-                    "supply_amount": 20,
+                    "supply_amount": 50,
                     // The almighty can supply from anyone
-                    "supplier": "dave"
+                    "supplier": "bob"
                 })
                 .to_string(),
             }
@@ -224,31 +222,176 @@ mod tests {
             .initiate(almighty)
             .read_request()
             .read_approval()
-            .expect("read request rejected")
+            .expect("read request should be approved")
             .read(&world)
-            .expect("failed to read")
+            .expect("should read")
             .write_request()
             .write_approval()
-            .expect("write request rejected")
+            .expect("write request should be approved")
             .write(&mut world)
-            .expect("failed to write");
+            .expect("should write");
 
-        todo!()
+        let expected = [
+            (
+                CompositeKey("alice".into(), "rose".into()),
+                AccountAssetV { balance: 500 },
+            ),
+            (
+                CompositeKey("bob".into(), "rose".into()),
+                AccountAssetV { balance: 0 },
+            ),
+            (
+                CompositeKey("carol".into(), "rose".into()),
+                AccountAssetV { balance: 140 },
+            ),
+            (
+                CompositeKey("dave".into(), "rose".into()),
+                AccountAssetV { balance: 140 },
+            ),
+            (
+                CompositeKey("eve".into(), "tulip".into()),
+                AccountAssetV { balance: 90 },
+            ),
+        ];
+
+        assert_eq!(world.account_asset, expected.into());
     }
 
     #[test]
     #[ignore = "reason: not implemented yet"]
     fn inspector_reads_but_does_not_send_others() {
-        let _inspector = SingleKey("bob".into());
+        let inspector = SingleKey("alice".into());
+        let mut world = state::World {
+            permission: PERMISSION.clone(),
+            account_asset: ACCOUNT_ASSET.clone(),
+            account_permission: ACCOUNT_PERMISSION.clone(),
+        };
+        world
+            .account_permission
+            .insert(CompositeKey("alice".into(), "inspector".into()), ());
 
-        todo!()
+        let supply_all = {
+            let engine = wasmtime::Engine::default();
+            let component = component::Component::from_file(
+                &engine,
+                "../target/wasm32-wasip2/debug/instruction.wasm",
+            )
+            .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
+
+            instruction::WasmInstruction {
+                component,
+                args: serde_json::json!({
+                    "asset": "rose",
+                    "threshold": 100,
+                    "supply_amount": 50,
+                    // The inspector cannot supply from others
+                    "supplier": "bob"
+                })
+                .to_string(),
+            }
+        };
+
+        println!("Initiating instruction");
+        let res = supply_all
+            .initiate(inspector)
+            .read_request()
+            .read_approval()
+            .expect("read request should be approved")
+            .read(&world)
+            .expect("should read")
+            .write_request()
+            .write_approval();
+
+        assert!(res.is_err(), "write request should be rejected");
+
+        // No effect on the world state
+        let expected = [
+            (
+                CompositeKey("alice".into(), "rose".into()),
+                AccountAssetV { balance: 500 },
+            ),
+            (
+                CompositeKey("bob".into(), "rose".into()),
+                AccountAssetV { balance: 100 },
+            ),
+            (
+                CompositeKey("carol".into(), "rose".into()),
+                AccountAssetV { balance: 90 },
+            ),
+            (
+                CompositeKey("dave".into(), "rose".into()),
+                AccountAssetV { balance: 90 },
+            ),
+            (
+                CompositeKey("eve".into(), "tulip".into()),
+                AccountAssetV { balance: 90 },
+            ),
+        ];
+
+        assert_eq!(world.account_asset, expected.into());
     }
 
     #[test]
     #[ignore = "reason: not implemented yet"]
     fn everyman_does_not_read_or_send_others() {
-        let _everyman = SingleKey("carol".into());
+        let everyman = SingleKey("alice".into());
+        let world = state::World {
+            permission: PERMISSION.clone(),
+            account_asset: ACCOUNT_ASSET.clone(),
+            account_permission: ACCOUNT_PERMISSION.clone(),
+        };
 
-        todo!()
+        let supply_all = {
+            let engine = wasmtime::Engine::default();
+            let component = component::Component::from_file(
+                &engine,
+                "../target/wasm32-wasip2/debug/instruction.wasm",
+            )
+            .expect("component should have been built by: cargo build --target wasm32-wasip2 --manifest-path guest/instruction/Cargo.toml");
+
+            instruction::WasmInstruction {
+                component,
+                args: serde_json::json!({
+                    // The everyman cannot read from others
+                    "asset": "rose",
+                    "threshold": 100,
+                    "supply_amount": 50,
+                    // The everyman cannot supply from others
+                    "supplier": "bob"
+                })
+                .to_string(),
+            }
+        };
+
+        println!("Initiating instruction");
+        let res = supply_all.initiate(everyman).read_request().read_approval();
+
+        assert!(res.is_err(), "read request should be rejected");
+
+        // No effect on the world state
+        let expected = [
+            (
+                CompositeKey("alice".into(), "rose".into()),
+                AccountAssetV { balance: 500 },
+            ),
+            (
+                CompositeKey("bob".into(), "rose".into()),
+                AccountAssetV { balance: 100 },
+            ),
+            (
+                CompositeKey("carol".into(), "rose".into()),
+                AccountAssetV { balance: 90 },
+            ),
+            (
+                CompositeKey("dave".into(), "rose".into()),
+                AccountAssetV { balance: 90 },
+            ),
+            (
+                CompositeKey("eve".into(), "tulip".into()),
+                AccountAssetV { balance: 90 },
+            ),
+        ];
+
+        assert_eq!(world.account_asset, expected.into());
     }
 }
