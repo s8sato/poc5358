@@ -50,10 +50,13 @@ mod tests {
     #[test]
     fn instruction_flows() {
         let mut world = state::World {
-            permission: BTreeMap::new(),
+            permission: PERMISSION.clone(),
             account_asset: ACCOUNT_ASSET.clone(),
-            account_permission: BTreeMap::new(),
+            account_permission: ACCOUNT_PERMISSION.clone(),
         };
+        world
+            .account_permission
+            .insert(CompositeKey("alice".into(), "almighty".into()), ());
 
         let supply_all = {
             let component = component::Component::from_file(
@@ -269,7 +272,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "reason: not implemented yet"]
     fn inspector_reads_but_does_not_send_others() {
         let inspector = SingleKey("alice".into());
         let mut world = state::World {
@@ -343,7 +345,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "reason: not implemented yet"]
     fn everyman_does_not_read_or_send_others() {
         let everyman = SingleKey("alice".into());
         let world = state::World {

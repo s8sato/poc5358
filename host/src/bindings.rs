@@ -295,7 +295,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_write_set_aggregation() {
+    fn write_set_with_duplicate_intents_aggregates() {
         let write_set = WriteSet {
             inner: vec![
                 WriteEntry {
@@ -329,7 +329,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "WriteSet aggregation failed")]
-    fn test_write_set_aggregation_fail() {
+    fn write_set_with_contradictory_intents_does_not_aggregate() {
         let write_set = WriteSet {
             inner: vec![
                 WriteEntry {

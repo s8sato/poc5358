@@ -1,7 +1,7 @@
 use poc::wit::types::*;
 
 wit_bindgen::generate!({
-    world: "authorizer",
+    world: "universe",
     path: "../../wit",
 });
 
@@ -9,6 +9,10 @@ struct Authorizer;
 
 /// Default implementation for permission validation.
 impl Guest for Authorizer {
+    fn read_request(_args: String) -> ReadSet {
+        unimplemented!("boilerplate");
+    }
+
     fn read_approval(signals: ReadSet, receptors: AllowSet) -> bool {
         let mut signals = signals;
         signals.inner.retain(|signal| {
@@ -23,6 +27,10 @@ impl Guest for Authorizer {
         });
 
         signals.inner.is_empty()
+    }
+
+    fn write_request(_view: ViewSet, _args: String) -> WriteSet {
+        unimplemented!("boilerplate");
     }
 
     fn write_approval(signals: EventSet, receptors: AllowSet) -> bool {

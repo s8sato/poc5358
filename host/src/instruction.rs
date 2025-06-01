@@ -22,7 +22,8 @@ pub struct WasmInstruction {
 pub type WasmComponent = wasmtime::component::Component;
 
 pub struct Wasmtime {
-    universe: bindings::Universe,
+    instruction: bindings::Universe,
+    authorizer: bindings::Universe,
     store: wasmtime::Store<InstructionState>,
 }
 
@@ -70,11 +71,15 @@ impl WasmInstruction {
         bindings::Universe::add_to_linker(&mut linker, |state: &mut InstructionState| state)
             .expect("failed to add bindings to linker");
 
-        let _universe = bindings::Universe::instantiate(&mut store, authorizer, &linker)
-            .expect("failed to instantiate authorizer component");
-        let universe = bindings::Universe::instantiate(&mut store, &self.component, &linker)
+        let instruction = bindings::Universe::instantiate(&mut store, &self.component, &linker)
             .expect("failed to instantiate instruction component");
-        let wasmtime = Wasmtime { universe, store };
+        let authorizer = bindings::Universe::instantiate(&mut store, authorizer, &linker)
+            .expect("failed to instantiate authorizer component");
+        let wasmtime = Wasmtime {
+            instruction,
+            authorizer,
+            store,
+        };
 
         Init {
             authority,
@@ -96,7 +101,7 @@ impl Init {
             mut wasmtime,
         } = self;
         let request = wasmtime
-            .universe
+            .instruction
             .call_read_request(&mut wasmtime.store, &args)
             .expect("failed to call read_request function");
 
@@ -124,7 +129,7 @@ impl ToRead {
         let permission = bindings::AllowSet::from((permission, authority.clone()));
 
         let verdict = wasmtime
-            .universe
+            .authorizer
             .call_read_approval(&mut wasmtime.store, &request, &permission)
             .expect("failed to call read_approval function");
         if !verdict {
@@ -185,7 +190,7 @@ impl HasRead {
             permission,
         } = self;
         let request = wasmtime
-            .universe
+            .instruction
             .call_write_request(&mut wasmtime.store, &result, &args)
             .expect("failed to call write_request function");
 
@@ -216,7 +221,7 @@ impl ToWrite {
         let intent = bindings::EventSet::from(&request);
 
         let verdict = wasmtime
-            .universe
+            .authorizer
             .call_write_approval(&mut wasmtime.store, &intent, &permission)
             .expect("failed to call write_approval function");
         if !verdict {
