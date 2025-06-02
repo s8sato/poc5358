@@ -5,6 +5,10 @@ This proof-of-concept explores splitting Hyperledger Iroha’s _Executor_ into m
 - <https://github.com/hyperledger-iroha/iroha/issues/5357>
 - <https://github.com/hyperledger-iroha/iroha/issues/5358> (see state-transition diagram)
 
+These occupy a key position within tracking issue [#5356](https://github.com/hyperledger-iroha/iroha/issues/5356):
+
+![big_picture_in_5356.png](big_picture_in_5356.png)
+
 ## Objective
 
 Can we cleanly separate instruction execution into three roles?
