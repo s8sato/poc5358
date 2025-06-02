@@ -68,9 +68,10 @@ Compare the test steps to the #5358 state-transition diagram for clarity.
 - `wasmtime::component::bindgen!` is used on the _host_ side to implement _import_ functions.
 - `wit_bindgen::generate!` is used on the _guest_ side to implement _export_ functions.
 
-### Component model trade-offs
+### [Component model](https://component-model.bytecodealliance.org/introduction.html) trade-offs
 
-- Removes all `unsafe` blocks around FFI calls, making maintenance easier.
+- Removes all `unsafe` blocks around FFI calls, making future development and maintenance easier:
+  > By expressing higher-level semantics than integers and floats, it becomes possible to statically analyse and reason about a component's behaviour - to enforce and guarantee properties just by looking at the surface of the component.
 - Wasm _components_ typically produce larger binaries than classic _modules_—keep that in mind.
 
 ### Future developer experience
