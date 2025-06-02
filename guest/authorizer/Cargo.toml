@@ -7,3 +7,4 @@ edition.workspace = true
 crate-type = ["cdylib"]
 
 [dependencies]
+wit-bindgen = { workspace = true}

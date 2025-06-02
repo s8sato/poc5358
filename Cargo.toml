@@ -4,11 +4,18 @@ version = "0.1.0"
 edition = "2024"
 
 [workspace]
+resolver = "3"
 members = [
     "host",
-    "wasm_instruction",
-    "authorizer"
-, "common"]
+    "guest/instruction",
+    "guest/authorizer",
+]
 
 [workspace.dependencies]
-wasmtime = "33.0"
+derive_more = { version = "2.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+wasmtime = { version = "33.0", features = ["component-model"] }
+wasmtime-wasi = "33.0"
+# wasmtime = "33.0"
+wit-bindgen = "0.42" 
